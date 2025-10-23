@@ -119,15 +119,20 @@
 </template>
 
 <script>
+import { authApi } from '@/api/index.js'
+
 export default {
   name: 'Layout',
   data() {
     return {
       isCollapse: false,
       userRole: this.getUserRoleFromRoute(),
-      username: this.getUsernameFromRoute(),
+      username: '用户',
       breadcrumbList: []
     }
+  },
+  async mounted() {
+    await this.loadUserInfo();
   },
   computed: {
     activeMenu() {
@@ -139,7 +144,6 @@ export default {
       handler(route) {
         this.updateBreadcrumb(route);
         this.userRole = this.getUserRoleFromRoute();
-        this.username = this.getUsernameFromRoute();
       },
       immediate: true
     }
@@ -157,14 +161,16 @@ export default {
       return 'student'; // 默认
     },
     
-    getUsernameFromRoute() {
-      const role = this.getUserRoleFromRoute();
-      const nameMap = {
-        'student': '张三',
-        'teacher': '李教授',
-        'admin': '管理员'
-      };
-      return nameMap[role] || '用户';
+    async loadUserInfo() {
+      try {
+        const response = await authApi.getUserInfo();
+        if (response.code === 200 && response.data) {
+          this.username = response.data.realName || response.data.username || '用户';
+        }
+      } catch (error) {
+        console.error('获取用户信息失败:', error);
+        this.username = '用户';
+      }
     },
     
     toggleCollapse() {
@@ -193,6 +199,9 @@ export default {
             cancelButtonText: '取消',
             type: 'warning'
           }).then(() => {
+            // 清除用户信息
+            localStorage.removeItem('token');
+            localStorage.removeItem('userInfo');
             this.$router.push('/login');
             this.$message.success('已退出登录');
           });

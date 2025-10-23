@@ -335,12 +335,12 @@ export default {
           const userData = response.data
           // 更新用户基本信息
           this.userInfo = {
-            name: userData.name || userData.username || '',
-            studentId: userData.studentNumber || userData.studentId || '',
+            name: userData.realName || userData.username || '',
+            studentId: userData.studentId || '',
             gender: userData.gender || '',
             birthday: userData.birthday || '',
             major: userData.major || '',
-            class: userData.class || userData.className || '',
+            class: userData.className || '',
             phone: userData.phone || '',
             email: userData.email || '',
             address: userData.address || '',
@@ -392,7 +392,7 @@ export default {
         const updateData = {
           realName: this.userInfo.name,
           gender: this.userInfo.gender,
-          birthday: this.userInfo.birthday,
+          birthday: this.formatBirthday(this.userInfo.birthday),
           phone: this.userInfo.phone,
           email: this.userInfo.email,
           address: this.userInfo.address,
@@ -413,6 +413,55 @@ export default {
         console.error('保存个人信息失败:', error);
         this.$message.error('保存个人信息失败，请稍后重试');
       }
+    },
+    
+    // 格式化生日日期
+    formatBirthday(birthday) {
+      if (!birthday) return '';
+      
+      // 确保birthday是字符串类型
+      const birthdayStr = String(birthday);
+      
+      // 如果是ISO格式的日期时间字符串，只提取日期部分
+      if (birthdayStr.includes('T') && !birthdayStr.includes('GMT')) {
+        return birthdayStr.split('T')[0];
+      }
+      
+      // 如果是Date对象的字符串表示，转换为YYYY-MM-DD格式
+      if (birthdayStr.includes('GMT') || birthdayStr.includes('GM')) {
+        try {
+          const date = new Date(birthdayStr);
+          if (!isNaN(date.getTime())) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+          }
+        } catch (e) {
+          console.warn('日期解析失败:', e);
+        }
+      }
+      
+      // 如果已经是YYYY-MM-DD格式，直接返回
+      if (/^\d{4}-\d{2}-\d{2}$/.test(birthdayStr)) {
+        return birthdayStr;
+      }
+      
+      // 其他情况，尝试解析为日期
+      try {
+        const date = new Date(birthdayStr);
+        if (!isNaN(date.getTime())) {
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          return `${year}-${month}-${day}`;
+        }
+      } catch (e) {
+        console.warn('日期解析失败:', e);
+      }
+      
+      // 如果无法解析，返回空字符串
+      return '';
     },
     
     changeAvatar() {
