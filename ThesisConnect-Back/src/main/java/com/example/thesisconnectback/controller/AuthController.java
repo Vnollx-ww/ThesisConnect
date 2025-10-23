@@ -41,7 +41,12 @@ public class AuthController {
         String phone = registerForm.get("phone");
         String department = registerForm.get("department");
         String studentId = registerForm.get("studentId");
-
+        String gender = registerForm.get("gender");
+        String birthday = registerForm.get("birthday");
+        String address = registerForm.get("address");
+        String major = registerForm.get("major");
+        String className = registerForm.get("className");
+        String title = registerForm.get("title");
         // 验证必填字段
         if (username == null || password == null || role == null || realName == null) {
             return Result.badRequest("用户名、密码、角色和姓名不能为空");
@@ -74,6 +79,12 @@ public class AuthController {
             newUser.setPhone(phone);
             newUser.setDepartment(department);
             newUser.setStudentId(studentId);
+            newUser.setGender(gender);
+            newUser.setBirthday(birthday);
+            newUser.setAddress(address);
+            newUser.setMajor(major);
+            newUser.setClassName(className);
+            newUser.setTitle(title);
             newUser.setStatus(1); // 默认启用
             newUser.setLoginCount(0);
 
@@ -189,12 +200,29 @@ public class AuthController {
             if (userData.containsKey("avatar")) {
                 existingUser.setAvatar((String) userData.get("avatar"));
             }
-
+            if (userData.containsKey("gender")) {
+                existingUser.setGender((String) userData.get("gender"));
+            }
+            if (userData.containsKey("birthday")) {
+                existingUser.setBirthday((String) userData.get("birthday"));
+            }
+            if (userData.containsKey("address")) {
+                existingUser.setAddress((String) userData.get("address"));
+            }
+            if (userData.containsKey("major")) {
+                existingUser.setMajor((String) userData.get("major"));
+            }
+            if (userData.containsKey("className")) {
+                existingUser.setClassName((String) userData.get("className"));
+            }
+            if (userData.containsKey("title")) {
+                existingUser.setTitle((String) userData.get("title"));
+            }
             boolean success = userService.updateById(existingUser);
             if (success) {
                 // 清除敏感信息
                 existingUser.setPassword(null);
-                return Result.success(existingUser, "用户信息更新成功");
+                return Result.success("用户信息更新成功",existingUser);
             } else {
                 return Result.error("用户信息更新失败");
             }

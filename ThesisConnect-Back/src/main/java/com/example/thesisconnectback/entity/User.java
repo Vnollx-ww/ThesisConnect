@@ -73,7 +73,41 @@ public class User {
      */
     @TableField("avatar")
     private String avatar;
+    /**
+     * 性别
+     */
+    @TableField("gender")
+    private String gender;
 
+    /**
+     * 生日
+     */
+    @TableField("birthday")
+    private String birthday;
+
+    /**
+     * 地址
+     */
+    @TableField("address")
+    private String address;
+
+    /**
+     * 专业
+     */
+    @TableField("major")
+    private String major;
+
+    /**
+     * 班级名称
+     */
+    @TableField("class_name")
+    private String className;
+
+    /**
+     * 职称/职位
+     */
+    @TableField("title")
+    private String title;
     /**
      * 状态：0-禁用，1-正常
      */
