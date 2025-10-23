@@ -104,11 +104,11 @@ export default {
                 
                 // 根据角色跳转到不同页面
                 if (this.loginForm.role === 'student') {
-                  this.$router.push('/layout/student/topics');
+                  this.$router.push('/student/topics');
                 } else if (this.loginForm.role === 'teacher') {
-                  this.$router.push('/layout/teacher/topics');
+                  this.$router.push('/teacher/topics');
                 } else if (this.loginForm.role === 'admin') {
-                  this.$router.push('/layout/admin/dashboard');
+                  this.$router.push('/admin/dashboard');
                 }
                 
                 this.$message.success('登录成功！');

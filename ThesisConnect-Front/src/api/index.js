@@ -324,5 +324,15 @@ export const statsApi = {
   // 获取进度统计
   getProgressStats() {
     return request.get('/api/stats/progress')
+  },
+  
+  // 获取用户增长趋势
+  getUserGrowthTrend(period = 'month') {
+    return request.get('/api/stats/user-growth-trend', { params: { period } })
+  },
+  
+  // 获取课题难度分布
+  getTopicDifficultyDistribution() {
+    return request.get('/api/stats/topic-difficulty-distribution')
   }
 }

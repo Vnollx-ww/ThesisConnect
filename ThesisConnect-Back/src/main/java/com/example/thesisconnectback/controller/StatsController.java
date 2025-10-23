@@ -178,4 +178,44 @@ public class StatsController {
             return Result.error("获取进度统计信息失败");
         }
     }
+
+    /**
+     * 获取用户增长趋势
+     */
+    @GetMapping("/user-growth-trend")
+    public Result<Map<String, Object>> getUserGrowthTrend(@RequestParam(defaultValue = "month") String period, HttpServletRequest request) {
+        try {
+            // 检查权限（只有管理员可以查看统计信息）
+            String role = (String) request.getAttribute("role");
+            if (!"admin".equals(role)) {
+                return Result.forbidden("权限不足");
+            }
+
+            Map<String, Object> trendData = userService.getUserGrowthTrend(period);
+            return Result.success(trendData);
+        } catch (Exception e) {
+            log.error("获取用户增长趋势失败：", e);
+            return Result.error("获取用户增长趋势失败");
+        }
+    }
+
+    /**
+     * 获取课题难度分布
+     */
+    @GetMapping("/topic-difficulty-distribution")
+    public Result<Map<String, Object>> getTopicDifficultyDistribution(HttpServletRequest request) {
+        try {
+            // 检查权限（只有管理员可以查看统计信息）
+            String role = (String) request.getAttribute("role");
+            if (!"admin".equals(role)) {
+                return Result.forbidden("权限不足");
+            }
+
+            Map<String, Object> distributionData = topicService.getTopicDifficultyDistribution();
+            return Result.success(distributionData);
+        } catch (Exception e) {
+            log.error("获取课题难度分布失败：", e);
+            return Result.error("获取课题难度分布失败");
+        }
+    }
 }

@@ -1,8 +1,10 @@
 <template>
   <div class="teacher-topics">
     <div class="page-header">
-      <h2 class="page-title">课题管理</h2>
-      <p class="page-desc">管理您发布的毕业论文课题，查看学生选择情况</p>
+      <div class="page-header-content">
+        <h2 class="page-title">课题管理</h2>
+        <p class="page-desc">管理您发布的毕业论文课题，查看学生选择情况</p>
+      </div>
       <el-button type="primary" @click="addTopic" class="add-topic-btn">
         <i class="el-icon-plus"></i>
         发布新课题
@@ -167,16 +169,16 @@
               <el-input-number v-model="topicForm.maxStudents" :min="1" :max="5"></el-input-number>
             </el-form-item>
           </el-col>
-          <el-col :span="12">
-            <el-form-item label="截止时间" prop="deadline">
-              <el-date-picker
-                v-model="topicForm.deadline"
-                type="date"
-                placeholder="选择截止时间">
-              </el-date-picker>
-            </el-form-item>
-          </el-col>
         </el-row>
+        
+        <el-form-item label="截止时间" prop="deadline">
+          <el-date-picker
+            v-model="topicForm.deadline"
+            type="date"
+            placeholder="选择截止时间"
+            style="width: 100%;">
+          </el-date-picker>
+        </el-form-item>
         
         <el-form-item label="技术要求">
           <el-input 
@@ -535,6 +537,10 @@ export default {
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 30px;
+}
+
+.page-header-content {
+  flex: 1;
 }
 
 .page-title {

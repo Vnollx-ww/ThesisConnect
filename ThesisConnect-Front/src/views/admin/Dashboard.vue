@@ -73,7 +73,14 @@
             </el-button-group>
           </div>
           <div class="chart-content">
-            <div id="userTrendChart" style="height: 300px;"></div>
+            <v-chart 
+              :option="userTrendOption" 
+              style="height: 300px;"
+              v-if="userTrendData.timeLabels && userTrendData.timeLabels.length > 0"
+            />
+            <div v-else style="height: 300px; display: flex; align-items: center; justify-content: center; color: #999;">
+              暂无数据
+            </div>
           </div>
         </div>
       </el-col>
@@ -85,7 +92,14 @@
             <h3>课题难度分布</h3>
           </div>
           <div class="chart-content">
-            <div id="topicDistributionChart" style="height: 300px;"></div>
+            <v-chart 
+              :option="topicDistributionOption" 
+              style="height: 300px;"
+              v-if="topicDistributionData.pieData && topicDistributionData.pieData.length > 0"
+            />
+            <div v-else style="height: 300px; display: flex; align-items: center; justify-content: center; color: #999;">
+              暂无数据
+            </div>
           </div>
         </div>
       </el-col>
@@ -282,6 +296,19 @@ export default {
         completionGrowth: 0
       },
       
+      // 用户增长趋势数据
+      userTrendData: {
+        timeLabels: [],
+        userCounts: [],
+        period: 'month'
+      },
+      
+      // 课题难度分布数据
+      topicDistributionData: {
+        pieData: [],
+        total: 0
+      },
+      
       systemStatus: {
         server: 'normal',
         cpu: 45,
@@ -331,9 +358,112 @@ export default {
       ]
     }
   },
+  computed: {
+    // 用户增长趋势图表配置
+    userTrendOption() {
+      return {
+        title: {
+          text: '用户增长趋势',
+          left: 'center',
+          textStyle: {
+            fontSize: 16,
+            fontWeight: 'normal'
+          }
+        },
+        tooltip: {
+          trigger: 'axis',
+          formatter: function(params) {
+            const data = params[0];
+            return `${data.axisValue}<br/>新增用户: ${data.value}人`;
+          }
+        },
+        xAxis: {
+          type: 'category',
+          data: this.userTrendData.timeLabels,
+          axisLabel: {
+            rotate: 45
+          }
+        },
+        yAxis: {
+          type: 'value',
+          name: '用户数'
+        },
+        series: [{
+          name: '新增用户',
+          type: 'line',
+          data: this.userTrendData.userCounts,
+          smooth: true,
+          lineStyle: {
+            color: '#409EFF'
+          },
+          itemStyle: {
+            color: '#409EFF'
+          },
+          areaStyle: {
+            color: {
+              type: 'linear',
+              x: 0,
+              y: 0,
+              x2: 0,
+              y2: 1,
+              colorStops: [{
+                offset: 0, color: 'rgba(64, 158, 255, 0.3)'
+              }, {
+                offset: 1, color: 'rgba(64, 158, 255, 0.1)'
+              }]
+            }
+          }
+        }]
+      };
+    },
+    
+    // 课题难度分布图表配置
+    topicDistributionOption() {
+      return {
+        title: {
+          text: '课题难度分布',
+          left: 'center',
+          textStyle: {
+            fontSize: 16,
+            fontWeight: 'normal'
+          }
+        },
+        tooltip: {
+          trigger: 'item',
+          formatter: '{a} <br/>{b}: {c} ({d}%)'
+        },
+        legend: {
+          orient: 'vertical',
+          left: 'left',
+          top: 'middle'
+        },
+        series: [{
+          name: '课题难度',
+          type: 'pie',
+          radius: ['40%', '70%'],
+          center: ['60%', '50%'],
+          data: this.topicDistributionData.pieData,
+          emphasis: {
+            itemStyle: {
+              shadowBlur: 10,
+              shadowOffsetX: 0,
+              shadowColor: 'rgba(0, 0, 0, 0.5)'
+            }
+          },
+          label: {
+            show: true,
+            formatter: '{b}: {c}'
+          },
+          labelLine: {
+            show: true
+          }
+        }]
+      };
+    }
+  },
   async mounted() {
     await this.loadDashboardData();
-    this.initCharts();
+    await this.loadChartData();
   },
   methods: {
     // 加载仪表板数据
@@ -356,15 +486,45 @@ export default {
     
     setUserTrendPeriod(period) {
       this.userTrendPeriod = period;
-      this.initCharts();
+      this.loadUserGrowthTrend();
     },
     
-    initCharts() {
-      // 这里应该使用 ECharts 或其他图表库
-      // 由于项目中没有安装图表库，这里只是模拟
-      this.$nextTick(() => {
-        console.log('初始化图表');
-      });
+    // 加载图表数据
+    async loadChartData() {
+      await Promise.all([
+        this.loadUserGrowthTrend(),
+        this.loadTopicDifficultyDistribution()
+      ]);
+    },
+    
+    // 加载用户增长趋势数据
+    async loadUserGrowthTrend() {
+      try {
+        const response = await statsApi.getUserGrowthTrend(this.userTrendPeriod);
+        if (response.code === 200) {
+          this.userTrendData = response.data;
+        } else {
+          this.$message.error(response.message || '获取用户增长趋势失败');
+        }
+      } catch (error) {
+        console.error('加载用户增长趋势失败:', error);
+        this.$message.error('加载用户增长趋势失败，请稍后重试');
+      }
+    },
+    
+    // 加载课题难度分布数据
+    async loadTopicDifficultyDistribution() {
+      try {
+        const response = await statsApi.getTopicDifficultyDistribution();
+        if (response.code === 200) {
+          this.topicDistributionData = response.data;
+        } else {
+          this.$message.error(response.message || '获取课题难度分布失败');
+        }
+      } catch (error) {
+        console.error('加载课题难度分布失败:', error);
+        this.$message.error('加载课题难度分布失败，请稍后重试');
+      }
     },
     
     refreshSystemStatus() {

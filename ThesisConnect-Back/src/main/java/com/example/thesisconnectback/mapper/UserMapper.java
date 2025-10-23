@@ -7,6 +7,7 @@ import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 用户Mapper接口
@@ -43,4 +44,36 @@ public interface UserMapper extends BaseMapper<User> {
      */
     @Select("UPDATE sys_user SET last_login_time = NOW(), login_count = login_count + 1 WHERE id = #{userId}")
     void updateLastLoginTime(@Param("userId") Long userId);
+
+    /**
+     * 获取用户增长趋势数据
+     */
+    @Select({
+        "<script>",
+        "SELECT ",
+        "<choose>",
+        "<when test='period == \"week\"'>",
+        "CONCAT(DATE_FORMAT(create_time, '%Y年'), '第', DATE_FORMAT(create_time, '%u'), '周') as timeLabel, COUNT(*) as userCount",
+        "</when>",
+        "<when test='period == \"month\"'>",
+        "CONCAT(DATE_FORMAT(create_time, '%Y年'), DATE_FORMAT(create_time, '%m'), '月') as timeLabel, COUNT(*) as userCount",
+        "</when>",
+        "<when test='period == \"year\"'>",
+        "CONCAT(DATE_FORMAT(create_time, '%Y'), '年') as timeLabel, COUNT(*) as userCount",
+        "</when>",
+        "<otherwise>",
+        "DATE_FORMAT(create_time, '%Y-%m') as timeLabel, COUNT(*) as userCount",
+        "</otherwise>",
+        "</choose>",
+        "FROM sys_user WHERE deleted = 0 AND create_time >= DATE_SUB(NOW(), INTERVAL ",
+        "<choose>",
+        "<when test='period == \"week\"'>12 WEEK</when>",
+        "<when test='period == \"month\"'>12 MONTH</when>",
+        "<when test='period == \"year\"'>5 YEAR</when>",
+        "<otherwise>12 MONTH</otherwise>",
+        "</choose>",
+        ") GROUP BY timeLabel ORDER BY timeLabel",
+        "</script>"
+    })
+    List<Map<String, Object>> getUserGrowthTrend(@Param("period") String period);
 }

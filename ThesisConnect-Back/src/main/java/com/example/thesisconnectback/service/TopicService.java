@@ -70,4 +70,9 @@ public interface TopicService extends IService<Topic> {
      * 获取热门课题
      */
     List<Topic> getPopularTopics(Integer limit);
+
+    /**
+     * 获取课题难度分布
+     */
+    Map<String, Object> getTopicDifficultyDistribution();
 }

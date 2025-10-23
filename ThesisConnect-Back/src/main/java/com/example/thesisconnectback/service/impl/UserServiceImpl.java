@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -126,5 +127,28 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Transactional
     public boolean batchDeleteUsers(List<Long> userIds) {
         return removeByIds(userIds);
+    }
+
+    @Override
+    public Map<String, Object> getUserGrowthTrend(String period) {
+        Map<String, Object> trendData = new HashMap<>();
+        
+        // 根据时间段获取用户增长数据
+        List<Map<String, Object>> growthData = userMapper.getUserGrowthTrend(period);
+        
+        // 构建时间轴和用户数量数据
+        List<String> timeLabels = new ArrayList<>();
+        List<Integer> userCounts = new ArrayList<>();
+        
+        for (Map<String, Object> data : growthData) {
+            timeLabels.add((String) data.get("timeLabel"));
+            userCounts.add(((Number) data.get("userCount")).intValue());
+        }
+        
+        trendData.put("timeLabels", timeLabels);
+        trendData.put("userCounts", userCounts);
+        trendData.put("period", period);
+        
+        return trendData;
     }
 }

@@ -5,9 +5,12 @@ import ElementUI from 'element-ui';
 import 'element-ui/lib/theme-chalk/index.css';
 import request from '@/utils/request'
 import * as api from '@/api'
+import ECharts from 'vue-echarts'
+import 'echarts'
 
 Vue.config.productionTip = false
 Vue.use(ElementUI);
+Vue.component('v-chart', ECharts)
 
 // 挂载axios到Vue原型
 Vue.prototype.$http = request

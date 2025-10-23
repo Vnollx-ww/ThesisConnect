@@ -65,4 +65,9 @@ public interface UserService extends IService<User> {
      * 批量删除用户
      */
     boolean batchDeleteUsers(List<Long> userIds);
+
+    /**
+     * 获取用户增长趋势
+     */
+    Map<String, Object> getUserGrowthTrend(String period);
 }

@@ -3,7 +3,7 @@
     <!-- 侧边栏 -->
     <el-aside :width="isCollapse ? '64px' : '240px'" class="sidebar">
       <div class="logo">
-        <img src="@/assets/vnollx.jpg" alt="Logo" class="logo-img">
+        <div class="logo-icon">🎓</div>
         <span v-show="!isCollapse" class="logo-text">选题系统</span>
       </div>
       
@@ -16,15 +16,15 @@
         
         <!-- 学生菜单 -->
         <template v-if="userRole === 'student'">
-          <el-menu-item index="/layout/student/topics">
+          <el-menu-item index="/student/topics">
             <i class="el-icon-document"></i>
             <span slot="title">选题列表</span>
           </el-menu-item>
-          <el-menu-item index="/layout/student/my-topic">
+          <el-menu-item index="/student/my-topic">
             <i class="el-icon-star-on"></i>
             <span slot="title">我的选题</span>
           </el-menu-item>
-          <el-menu-item index="/layout/student/profile">
+          <el-menu-item index="/student/profile">
             <i class="el-icon-user"></i>
             <span slot="title">个人信息</span>
           </el-menu-item>
@@ -32,19 +32,19 @@
         
         <!-- 教师菜单 -->
         <template v-if="userRole === 'teacher'">
-          <el-menu-item index="/layout/teacher/topics">
+          <el-menu-item index="/teacher/topics">
             <i class="el-icon-document"></i>
             <span slot="title">课题管理</span>
           </el-menu-item>
-          <el-menu-item index="/layout/teacher/students">
+          <el-menu-item index="/teacher/students">
             <i class="el-icon-user"></i>
             <span slot="title">学生管理</span>
           </el-menu-item>
-          <el-menu-item index="/layout/teacher/reports">
+          <el-menu-item index="/teacher/reports">
             <i class="el-icon-data-line"></i>
             <span slot="title">统计报表</span>
           </el-menu-item>
-          <el-menu-item index="/layout/teacher/profile">
+          <el-menu-item index="/teacher/profile">
             <i class="el-icon-setting"></i>
             <span slot="title">个人设置</span>
           </el-menu-item>
@@ -52,19 +52,19 @@
         
         <!-- 管理员菜单 -->
         <template v-if="userRole === 'admin'">
-          <el-menu-item index="/layout/admin/dashboard">
+          <el-menu-item index="/admin/dashboard">
             <i class="el-icon-data-board"></i>
             <span slot="title">数据概览</span>
           </el-menu-item>
-          <el-menu-item index="/layout/admin/users">
+          <el-menu-item index="/admin/users">
             <i class="el-icon-user"></i>
             <span slot="title">用户管理</span>
           </el-menu-item>
-          <el-menu-item index="/layout/admin/topics">
+          <el-menu-item index="/admin/topics">
             <i class="el-icon-document"></i>
             <span slot="title">课题管理</span>
           </el-menu-item>
-          <el-menu-item index="/layout/admin/system">
+          <el-menu-item index="/admin/system">
             <i class="el-icon-setting"></i>
             <span slot="title">系统设置</span>
           </el-menu-item>
@@ -151,6 +151,14 @@ export default {
   methods: {
     getUserRoleFromRoute() {
       const path = this.$route.path;
+      if (path.startsWith('/student')) {
+        return 'student';
+      } else if (path.startsWith('/teacher')) {
+        return 'teacher';
+      } else if (path.startsWith('/admin')) {
+        return 'admin';
+      }
+      // 兼容旧路由
       if (path.includes('/student/')) {
         return 'student';
       } else if (path.includes('/teacher/')) {
@@ -158,7 +166,12 @@ export default {
       } else if (path.includes('/admin/')) {
         return 'admin';
       }
-      return 'student'; // 默认
+      // 如果路径是 /layout 或 /layout/，根据用户信息判断角色
+      if (path === '/layout' || path === '/layout/') {
+        const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+        return userInfo.role || 'admin'; // 默认管理员
+      }
+      return 'admin'; // 默认管理员
     },
     
     async loadUserInfo() {
@@ -237,11 +250,12 @@ export default {
   border-bottom: 1px solid #e6e6e6;
 }
 
-.logo-img {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
+.logo-icon {
+  font-size: 32px;
   margin-right: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .logo-text {
