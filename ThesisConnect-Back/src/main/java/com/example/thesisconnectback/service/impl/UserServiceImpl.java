@@ -154,9 +154,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     }
     
     @Override
-    public List<User> getStudentsByTeacher(Long teacherId) {
-        // 通过选题表关联查询选择该教师课题的学生
-        return userMapper.getStudentsByTeacher(teacherId);
+    public List<Map<String, Object>> getStudentsByTeacherWithSelection(Long teacherId) {
+        return userMapper.getStudentsByTeacherWithSelection(teacherId);
     }
     
     @Override
@@ -181,6 +180,45 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         stats.put("activeStudents", activeStudents.size());
         stats.put("completedStudents", completedStudents.size());
         stats.put("avgProgress", avgProgress != null ? avgProgress : 0);
+        
+        return stats;
+    }
+    
+    /**
+     * 根据教师获取学生统计信息
+     */
+    public Map<String, Object> getStudentStatsByTeacher(Long teacherId) {
+        Map<String, Object> stats = new HashMap<>();
+        
+        // 获取选择该教师课题的学生总数
+        List<Map<String, Object>> students = userMapper.getStudentsByTeacherWithSelection(teacherId);
+        int totalStudents = students.size();
+        
+        // 统计活跃学生（状态为active或approved）
+        int activeStudents = 0;
+        int completedStudents = 0;
+        double totalProgress = 0;
+        
+        for (Map<String, Object> student : students) {
+            String status = (String) student.get("selection_status");
+            Integer progress = (Integer) student.get("progress");
+            
+            if ("active".equals(status) || "approved".equals(status)) {
+                activeStudents++;
+                if (progress != null) {
+                    totalProgress += progress;
+                }
+            } else if ("completed".equals(status)) {
+                completedStudents++;
+            }
+        }
+        
+        double avgProgress = totalStudents > 0 ? totalProgress / totalStudents : 0;
+        
+        stats.put("totalStudents", totalStudents);
+        stats.put("activeStudents", activeStudents);
+        stats.put("completedStudents", completedStudents);
+        stats.put("avgProgress", Math.round(avgProgress * 100) / 100.0);
         
         return stats;
     }

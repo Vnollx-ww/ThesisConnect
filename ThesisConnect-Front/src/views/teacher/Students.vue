@@ -103,28 +103,32 @@
       
       <div class="students-table">
         <el-table :data="filteredStudents" style="width: 100%">
-          <el-table-column prop="name" label="姓名" width="100"></el-table-column>
-          <el-table-column prop="studentId" label="学号" width="120"></el-table-column>
-          <el-table-column prop="topicTitle" label="课题" width="200">
+          <el-table-column prop="real_name" label="姓名" width="100"></el-table-column>
+          <el-table-column prop="student_id" label="学号" width="120"></el-table-column>
+          <el-table-column prop="topic_title" label="课题" width="200">
             <template slot-scope="scope">
               <el-button type="text" @click="viewTopic(scope.row)">
-                {{ scope.row.topicTitle }}
+                {{ scope.row.topic_title }}
               </el-button>
             </template>
           </el-table-column>
           <el-table-column prop="progress" label="进度" width="120">
             <template slot-scope="scope">
-              <el-progress :percentage="scope.row.progress" :stroke-width="6"></el-progress>
+              <el-progress :percentage="scope.row.progress || 0" :stroke-width="6"></el-progress>
             </template>
           </el-table-column>
-          <el-table-column prop="status" label="状态" width="100">
+          <el-table-column prop="selection_status" label="状态" width="100">
             <template slot-scope="scope">
-              <el-tag :type="getStatusType(scope.row.status)" size="small">
-                {{ getStatusText(scope.row.status) }}
+              <el-tag :type="getSelectionStatusType(scope.row.selection_status)" size="small">
+                {{ getSelectionStatusText(scope.row.selection_status) }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="lastUpdate" label="最后更新" width="120"></el-table-column>
+          <el-table-column prop="selection_time" label="选题时间" width="120">
+            <template slot-scope="scope">
+              {{ formatDate(scope.row.selection_time) }}
+            </template>
+          </el-table-column>
           <el-table-column prop="phone" label="联系电话" width="120"></el-table-column>
           <el-table-column prop="email" label="邮箱" width="150"></el-table-column>
           <el-table-column label="操作" width="280">
@@ -151,8 +155,8 @@
               <i class="el-icon-user-solid"></i>
             </el-avatar>
             <div class="student-info">
-              <h3>{{ selectedStudent.name }}</h3>
-              <p>学号：{{ selectedStudent.studentId }}</p>
+              <h3>{{ selectedStudent.real_name }}</h3>
+              <p>学号：{{ selectedStudent.student_id }}</p>
               <p>专业：{{ selectedStudent.major }}</p>
             </div>
           </div>
@@ -189,13 +193,13 @@
                 <el-col :span="12">
                   <div class="info-item">
                     <label>选择时间：</label>
-                    <span>{{ selectedStudent.selectedTime }}</span>
+                    <span>{{ formatDate(selectedStudent.selection_time) }}</span>
                   </div>
                 </el-col>
                 <el-col :span="12">
                   <div class="info-item">
                     <label>最后更新：</label>
-                    <span>{{ selectedStudent.lastUpdate }}</span>
+                    <span>{{ formatDate(selectedStudent.update_time) }}</span>
                   </div>
                 </el-col>
               </el-row>
@@ -206,53 +210,45 @@
             <div class="progress-content">
               <div class="progress-overview">
                 <el-progress 
-                  :percentage="selectedStudent.progress" 
-                  :color="getProgressColor(selectedStudent.progress)"
+                  :percentage="selectedStudent.progress || 0" 
+                  :color="getProgressColor(selectedStudent.progress || 0)"
                   :stroke-width="8">
                 </el-progress>
+                <p style="text-align: center; margin-top: 10px; color: #666;">
+                  当前进度：{{ selectedStudent.progress || 0 }}%
+                </p>
               </div>
               
-              <div class="progress-timeline">
-                <el-timeline>
-                  <el-timeline-item
-                    v-for="(milestone, index) in selectedStudent.milestones"
-                    :key="index"
-                    :timestamp="milestone.date"
-                    :type="milestone.status === 'completed' ? 'success' : milestone.status === 'current' ? 'primary' : 'info'">
-                    <div class="milestone-content">
-                      <h4>{{ milestone.title }}</h4>
-                      <p>{{ milestone.description }}</p>
-                      <el-tag 
-                        :type="milestone.status === 'completed' ? 'success' : milestone.status === 'current' ? 'primary' : 'info'"
-                        size="small">
-                        {{ getStatusText(milestone.status) }}
-                      </el-tag>
-                    </div>
-                  </el-timeline-item>
-                </el-timeline>
+              <div class="progress-description">
+                <h4>进度描述</h4>
+                <p>{{ selectedStudent.progress_description || '暂无进度描述' }}</p>
+              </div>
+              
+              <div class="problems-section" v-if="selectedStudent.problems">
+                <h4>遇到的问题</h4>
+                <p>{{ selectedStudent.problems }}</p>
               </div>
             </div>
           </el-tab-pane>
           
-          <el-tab-pane label="文档记录" name="documents">
-            <div class="documents-content">
-              <el-table :data="selectedStudent.documents" style="width: 100%">
-                <el-table-column prop="name" label="文档名称" min-width="200"></el-table-column>
-                <el-table-column prop="type" label="文档类型" width="120"></el-table-column>
-                <el-table-column prop="uploadTime" label="上传时间" width="150"></el-table-column>
-                <el-table-column prop="status" label="状态" width="100">
-                  <template slot-scope="scope">
-                    <el-tag :type="scope.row.status === 'approved' ? 'success' : scope.row.status === 'pending' ? 'warning' : 'danger'" size="small">
-                      {{ getDocumentStatusText(scope.row.status) }}
-                    </el-tag>
-                  </template>
-                </el-table-column>
-                <el-table-column label="操作" width="100" fixed="right">
-                  <template slot-scope="scope">
-                    <el-button type="text" size="small" @click="downloadDocument(scope.row)">下载</el-button>
-                  </template>
-                </el-table-column>
-              </el-table>
+          <el-tab-pane label="课题信息" name="topic">
+            <div class="topic-info">
+              <div class="info-item">
+                <label>课题名称：</label>
+                <span>{{ selectedStudent.topic_title }}</span>
+              </div>
+              <div class="info-item">
+                <label>课题描述：</label>
+                <span>{{ selectedStudent.topic_description || '暂无描述' }}</span>
+              </div>
+              <div class="info-item">
+                <label>难度等级：</label>
+                <span>{{ getDifficultyText(selectedStudent.difficulty) }}</span>
+              </div>
+              <div class="info-item">
+                <label>专业要求：</label>
+                <span>{{ selectedStudent.major || '不限专业' }}</span>
+              </div>
             </div>
           </el-tab-pane>
         </el-tabs>
@@ -315,22 +311,108 @@
         <el-button type="primary" @click="submitEvaluation">提交</el-button>
       </span>
     </el-dialog>
+    
+    <!-- 课题详情对话框 -->
+    <el-dialog
+      title="课题详情"
+      :visible.sync="detailDialogVisible"
+      width="800px">
+      <div v-if="selectedTopic" class="topic-detail">
+        <div class="detail-header">
+          <h3>{{ selectedTopic.title }}</h3>
+          <div class="detail-meta">
+            <el-tag :type="getDifficultyType(selectedTopic.difficulty)" size="small">
+              {{ getDifficultyText(selectedTopic.difficulty) }}
+            </el-tag>
+            <el-tag :type="getStatusType(selectedTopic.status)" size="small">
+              {{ getStatusText(selectedTopic.status) }}
+            </el-tag>
+          </div>
+        </div>
+        
+        <div class="detail-content">
+          <el-tabs v-model="activeTab">
+            <el-tab-pane label="基本信息" name="basic">
+              <div class="info-grid">
+                <div class="info-item">
+                  <label>课题名称:</label>
+                  <span>{{ selectedTopic.title }}</span>
+                </div>
+                <div class="info-item">
+                  <label>专业要求:</label>
+                  <span>{{ selectedTopic.major }}</span>
+                </div>
+                <div class="info-item">
+                  <label>难度等级:</label>
+                  <span>{{ getDifficultyText(selectedTopic.difficulty) }}</span>
+                </div>
+                <div class="info-item">
+                  <label>最大人数:</label>
+                  <span>{{ selectedTopic.maxStudents }}</span>
+                </div>
+                <div class="info-item">
+                  <label>已选人数:</label>
+                  <span>{{ selectedTopic.selectedCount }}</span>
+                </div>
+                <div class="info-item">
+                  <label>截止时间:</label>
+                  <span>{{ selectedTopic.deadline }}</span>
+                </div>
+                <div class="info-item">
+                  <label>浏览量:</label>
+                  <span>{{ selectedTopic.viewCount }}</span>
+                </div>
+                <div class="info-item">
+                  <label>评分:</label>
+                  <span>{{ selectedTopic.rating }}</span>
+                </div>
+              </div>
+            </el-tab-pane>
+            
+            <el-tab-pane label="课题描述" name="description">
+              <div class="description-content">
+                <h4>课题描述</h4>
+                <p>{{ selectedTopic.description }}</p>
+                
+                <h4>技术要求</h4>
+                <div class="requirements">
+                  <p v-for="requirement in getRequirementsArray(selectedTopic.requirements)" :key="requirement">
+                    • {{ requirement }}
+                  </p>
+                </div>
+                
+                <h4>预期成果</h4>
+                <p>{{ selectedTopic.expectedOutcome }}</p>
+              </div>
+            </el-tab-pane>
+          </el-tabs>
+        </div>
+      </div>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="detailDialogVisible = false">关闭</el-button>
+      </span>
+    </el-dialog>
   </div>
 </template>
 
 <script>
+import { userApi, progressApi } from '@/api'
+
 export default {
   name: 'TeacherStudents',
   data() {
     return {
+      loading: false,
       searchKeyword: '',
       statusFilter: '',
       topicFilter: '',
       studentDialogVisible: false,
       messageDialogVisible: false,
       evaluateDialogVisible: false,
+      detailDialogVisible: false,
       activeTab: 'basic',
       selectedStudent: null,
+      selectedTopic: null,
       
       messageForm: {
         receiver: '',
@@ -346,10 +428,10 @@ export default {
       },
       
       stats: {
-        totalStudents: 12,
-        activeStudents: 8,
-        completedStudents: 2,
-        avgProgress: 65
+        totalStudents: 0,
+        activeStudents: 0,
+        completedStudents: 0,
+        avgProgress: 0
       },
       
       topics: [
@@ -358,76 +440,7 @@ export default {
         { id: 3, title: '智能家居控制系统' }
       ],
       
-      students: [
-        {
-          id: 1,
-          name: '张三',
-          studentId: '2021001001',
-          topicId: 1,
-          topicTitle: '基于深度学习的图像识别系统',
-          progress: 35,
-          status: 'active',
-          lastUpdate: '2024-02-15',
-          phone: '13800138000',
-          email: 'zhangsan@example.com',
-          major: '计算机科学与技术',
-          gpa: '3.8',
-          selectedTime: '2024-01-15',
-          avatar: '',
-          milestones: [
-            { title: '需求分析', description: '完成系统需求分析', date: '2024-01-20', status: 'completed' },
-            { title: '技术调研', description: '调研相关技术', date: '2024-02-01', status: 'completed' },
-            { title: '系统设计', description: '完成系统设计', date: '2024-02-15', status: 'current' }
-          ],
-          documents: [
-            { name: '需求分析文档.docx', type: '需求文档', uploadTime: '2024-01-20', status: 'approved' },
-            { name: '技术调研报告.docx', type: '调研报告', uploadTime: '2024-02-01', status: 'approved' }
-          ]
-        },
-        {
-          id: 2,
-          name: '李四',
-          studentId: '2021001002',
-          topicId: 1,
-          topicTitle: '基于深度学习的图像识别系统',
-          progress: 20,
-          status: 'active',
-          lastUpdate: '2024-02-10',
-          phone: '13800138001',
-          email: 'lisi@example.com',
-          major: '计算机科学与技术',
-          gpa: '3.6',
-          selectedTime: '2024-01-20',
-          avatar: '',
-          milestones: [
-            { title: '需求分析', description: '完成系统需求分析', date: '2024-01-25', status: 'completed' },
-            { title: '技术调研', description: '调研相关技术', date: '2024-02-10', status: 'current' }
-          ],
-          documents: [
-            { name: '需求分析文档.docx', type: '需求文档', uploadTime: '2024-01-25', status: 'pending' }
-          ]
-        },
-        {
-          id: 3,
-          name: '王五',
-          studentId: '2021001003',
-          topicId: 2,
-          topicTitle: '校园二手交易平台设计与实现',
-          progress: 15,
-          status: 'active',
-          lastUpdate: '2024-02-12',
-          phone: '13800138002',
-          email: 'wangwu@example.com',
-          major: '软件工程',
-          gpa: '3.5',
-          selectedTime: '2024-01-25',
-          avatar: '',
-          milestones: [
-            { title: '需求分析', description: '完成系统需求分析', date: '2024-02-12', status: 'current' }
-          ],
-          documents: []
-        }
-      ]
+      students: []
     }
   },
   computed: {
@@ -437,25 +450,76 @@ export default {
       // 搜索过滤
       if (this.searchKeyword) {
         filtered = filtered.filter(student => 
-          student.name.toLowerCase().includes(this.searchKeyword.toLowerCase()) ||
-          student.studentId.toLowerCase().includes(this.searchKeyword.toLowerCase())
+          student.real_name && student.real_name.toLowerCase().includes(this.searchKeyword.toLowerCase()) ||
+          student.student_id && student.student_id.toLowerCase().includes(this.searchKeyword.toLowerCase()) ||
+          student.topic_title && student.topic_title.toLowerCase().includes(this.searchKeyword.toLowerCase())
         );
       }
       
       // 状态过滤
       if (this.statusFilter) {
-        filtered = filtered.filter(student => student.status === this.statusFilter);
+        filtered = filtered.filter(student => student.selection_status === this.statusFilter);
       }
       
       // 课题过滤
       if (this.topicFilter) {
-        filtered = filtered.filter(student => student.topicId === this.topicFilter);
+        filtered = filtered.filter(student => student.topic_id === this.topicFilter);
       }
       
       return filtered;
     }
   },
+  mounted() {
+    this.loadStudents();
+    this.loadStats();
+  },
   methods: {
+    getCurrentTeacherId() {
+      const userInfo = JSON.parse(localStorage.getItem('user') || '{}');
+      if (!userInfo || !userInfo.id) {
+        this.$message.error('用户信息获取失败，请重新登录');
+        this.$router.push('/login');
+        return null;
+      }
+      return userInfo.id;
+    },
+    
+    async loadStudents() {
+      try {
+        this.loading = true;
+        const teacherId = this.getCurrentTeacherId();
+        if (!teacherId) {
+          return;
+        }
+        const response = await userApi.getStudentsByTeacher(teacherId);
+        if (response.code === 200) {
+          this.students = response.data || [];
+        } else {
+          this.$message.error(response.message || '获取学生列表失败');
+        }
+      } catch (error) {
+        console.error('加载学生列表失败:', error);
+        this.$message.error('加载学生列表失败，请稍后重试');
+      } finally {
+        this.loading = false;
+      }
+    },
+    
+    async loadStats() {
+      try {
+        const teacherId = this.getCurrentTeacherId();
+        if (!teacherId) {
+          return;
+        }
+        const response = await userApi.getStudentStatsByTeacher(teacherId);
+        if (response.code === 200) {
+          this.stats = response.data;
+        }
+      } catch (error) {
+        console.error('加载统计数据失败:', error);
+      }
+    },
+    
     handleSearch() {
       // 搜索逻辑已在computed中处理
     },
@@ -501,7 +565,24 @@ export default {
     },
     
     viewTopic(student) {
-      this.$message.info(`查看课题"${student.topicTitle}"的详情`);
+      // 直接弹窗显示课题详情
+      this.selectedTopic = {
+        id: student.topic_id,
+        title: student.topic_title,
+        description: student.topic_description || '暂无描述',
+        major: student.major || '不限专业',
+        difficulty: student.difficulty || 'medium',
+        maxStudents: student.max_students || 2,
+        deadline: student.deadline || '暂无截止时间',
+        requirements: student.requirements || '暂无要求',
+        expectedOutcome: student.expected_outcome || '暂无预期成果',
+        viewCount: student.view_count || 0,
+        rating: student.rating || '暂无评分',
+        status: student.topic_status || 'active',
+        selectedCount: student.selected_count || 0
+      };
+      this.activeTab = 'basic';
+      this.detailDialogVisible = true;
     },
     
     downloadDocument(document) {
@@ -528,6 +609,67 @@ export default {
         'paused': '已暂停'
       };
       return textMap[status] || '未知';
+    },
+    
+    getSelectionStatusType(status) {
+      const statusMap = {
+        'pending': 'warning',
+        'approved': 'success',
+        'active': 'success',
+        'rejected': 'danger',
+        'completed': 'info'
+      };
+      return statusMap[status] || 'info';
+    },
+    
+    getSelectionStatusText(status) {
+      const statusMap = {
+        'pending': '待审核',
+        'approved': '已通过',
+        'active': '进行中',
+        'rejected': '已拒绝',
+        'completed': '已完成'
+      };
+      return statusMap[status] || '未知';
+    },
+    
+    formatDate(dateString) {
+      if (!dateString) return '-';
+      const date = new Date(dateString);
+      return date.toLocaleDateString('zh-CN');
+    },
+    
+    getDifficultyType(difficulty) {
+      const typeMap = {
+        'easy': 'success',
+        'medium': 'warning',
+        'hard': 'danger'
+      };
+      return typeMap[difficulty] || 'info';
+    },
+    
+    getDifficultyText(difficulty) {
+      const textMap = {
+        'easy': '简单',
+        'medium': '中等',
+        'hard': '困难'
+      };
+      return textMap[difficulty] || '未知';
+    },
+    
+    getRequirementsArray(requirements) {
+      if (!requirements) return [];
+      if (typeof requirements === 'string') {
+        return requirements.split('\n').filter(req => req.trim());
+      }
+      return requirements;
+    },
+    
+    getProgressColor(progress) {
+      if (progress >= 80) return '#67C23A';
+      if (progress >= 60) return '#E6A23C';
+      if (progress >= 40) return '#F56C6C';
+      return '#909399';
     },
     
     getDocumentStatusText(status) {
@@ -785,5 +927,79 @@ export default {
     align-self: stretch;
     justify-content: space-around;
   }
+}
+
+/* 课题详情对话框样式 */
+.topic-detail {
+  padding: 20px 0;
+}
+
+.detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #eee;
+}
+
+.detail-header h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0;
+}
+
+.detail-meta {
+  display: flex;
+  gap: 10px;
+}
+
+.detail-content {
+  margin-top: 20px;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+}
+
+.info-item label {
+  font-weight: 600;
+  color: #2c3e50;
+  margin-right: 10px;
+  min-width: 80px;
+}
+
+.info-item span {
+  color: #7f8c8d;
+}
+
+.description-content h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 20px 0 10px 0;
+}
+
+.description-content h4:first-child {
+  margin-top: 0;
+}
+
+.description-content p {
+  color: #7f8c8d;
+  line-height: 1.6;
+  margin: 10px 0;
+}
+
+.requirements p {
+  margin: 5px 0;
+  padding-left: 10px;
 }
 </style>

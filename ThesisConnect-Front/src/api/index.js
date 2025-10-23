@@ -55,6 +55,9 @@ export const userApi = {
   // 获取学生统计
   getStudentStats() {
     return request.get('/api/users/student-stats')
+  },
+  getStudentStatsByTeacher(teacherId) {
+    return request.get(`/api/users/teacher/${teacherId}/student-stats`)
   }
 }
 

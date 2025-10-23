@@ -376,6 +376,9 @@ export default {
   async mounted() {
     await this.loadTopics();
     await this.loadStats();
+    
+    // 检查是否有来自学生管理页面的课题详情查看请求
+    this.checkTopicDetailRequest();
   },
   methods: {
     // 加载课题数据
@@ -413,6 +416,27 @@ export default {
         }
       } catch (error) {
         console.error('加载统计数据失败:', error);
+      }
+    },
+    
+    // 检查课题详情查看请求
+    checkTopicDetailRequest() {
+      const highlightTopic = this.$route.query.highlightTopic;
+      const topicTitle = this.$route.query.topicTitle;
+      
+      if (highlightTopic && topicTitle) {
+        // 查找对应的课题
+        const topic = this.topics.find(t => t.id == highlightTopic);
+        if (topic) {
+          // 延迟执行，确保数据已加载
+          this.$nextTick(() => {
+            this.viewTopicDetail(topic);
+            // 清除URL参数
+            this.$router.replace({ path: '/teacher/topics' });
+          });
+        } else {
+          this.$message.warning(`未找到课题"${topicTitle}"`);
+        }
       }
     },
     

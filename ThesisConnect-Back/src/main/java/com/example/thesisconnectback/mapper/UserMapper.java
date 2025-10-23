@@ -78,13 +78,18 @@ public interface UserMapper extends BaseMapper<User> {
     List<Map<String, Object>> getUserGrowthTrend(@Param("period") String period);
     
     /**
-     * 根据教师获取学生列表
+     * 根据教师获取学生列表（包含选题信息）
      */
-    @Select("SELECT DISTINCT u.* FROM sys_user u " +
+    @Select("SELECT DISTINCT u.*, s.topic_id, s.topic_title, s.selection_time, s.status as selection_status, " +
+            "s.progress, s.progress_description, s.problems, s.final_grade, " +
+            "t.description as topic_description, t.major, t.difficulty, t.max_students, " +
+            "t.deadline, t.requirements, t.expected_outcome, t.view_count, t.rating, " +
+            "t.status as topic_status, t.selected_count " +
+            "FROM sys_user u " +
             "INNER JOIN sys_selection s ON u.id = s.student_id " +
             "INNER JOIN sys_topic t ON s.topic_id = t.id " +
-            "WHERE t.teacher_id = #{teacherId} AND u.role = 'student' AND u.deleted = 0")
-    List<User> getStudentsByTeacher(@Param("teacherId") Long teacherId);
+            "WHERE t.teacher_id = #{teacherId} AND u.role = 'student' AND u.deleted = 0 AND s.deleted = 0")
+    List<Map<String, Object>> getStudentsByTeacherWithSelection(@Param("teacherId") Long teacherId);
     
     /**
      * 获取活跃学生（有选题的学生）

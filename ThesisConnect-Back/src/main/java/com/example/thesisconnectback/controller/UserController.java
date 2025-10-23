@@ -309,7 +309,7 @@ public class UserController {
      * 根据教师获取学生列表
      */
     @GetMapping("/teacher/{teacherId}/students")
-    public Result<List<User>> getStudentsByTeacher(@PathVariable Long teacherId, HttpServletRequest request) {
+    public Result<List<Map<String, Object>>> getStudentsByTeacher(@PathVariable Long teacherId, HttpServletRequest request) {
         try {
             // 权限检查：只有管理员或教师本人可以查看
             User currentUser = getCurrentUser(request);
@@ -321,7 +321,7 @@ public class UserController {
                 return Result.error("无权限访问");
             }
             
-            List<User> students = userService.getStudentsByTeacher(teacherId);
+            List<Map<String, Object>> students = userService.getStudentsByTeacherWithSelection(teacherId);
             return Result.success(students);
         } catch (Exception e) {
             log.error("获取教师学生列表失败：", e);
@@ -350,6 +350,30 @@ public class UserController {
         } catch (Exception e) {
             log.error("获取学生统计信息失败：", e);
             return Result.error("获取学生统计信息失败");
+        }
+    }
+    
+    /**
+     * 根据教师获取学生统计信息
+     */
+    @GetMapping("/teacher/{teacherId}/student-stats")
+    public Result<Map<String, Object>> getStudentStatsByTeacher(@PathVariable Long teacherId, HttpServletRequest request) {
+        try {
+            // 权限检查：只有管理员或教师本人可以查看
+            User currentUser = getCurrentUser(request);
+            if (currentUser == null) {
+                return Result.error("未登录");
+            }
+            
+            if (!"admin".equals(currentUser.getRole()) && !teacherId.equals(currentUser.getId())) {
+                return Result.error("无权限访问");
+            }
+            
+            Map<String, Object> stats = userService.getStudentStatsByTeacher(teacherId);
+            return Result.success(stats);
+        } catch (Exception e) {
+            log.error("获取教师学生统计信息失败：", e);
+            return Result.error("获取教师学生统计信息失败");
         }
     }
     

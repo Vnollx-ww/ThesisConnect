@@ -74,10 +74,18 @@ public interface UserService extends IService<User> {
     /**
      * 根据教师获取学生列表
      */
-    List<User> getStudentsByTeacher(Long teacherId);
+    /**
+     * 根据教师获取学生列表（包含选题信息）
+     */
+    List<Map<String, Object>> getStudentsByTeacherWithSelection(Long teacherId);
     
     /**
      * 获取学生统计信息
      */
     Map<String, Object> getStudentStats();
+    
+    /**
+     * 根据教师获取学生统计信息
+     */
+    Map<String, Object> getStudentStatsByTeacher(Long teacherId);
 }
