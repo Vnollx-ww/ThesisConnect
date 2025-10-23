@@ -45,6 +45,16 @@ export const userApi = {
   // 获取用户统计
   getUserStats() {
     return request.get('/api/users/stats')
+  },
+  
+  // 根据教师获取学生列表
+  getStudentsByTeacher(teacherId) {
+    return request.get(`/api/users/teacher/${teacherId}/students`)
+  },
+  
+  // 获取学生统计
+  getStudentStats() {
+    return request.get('/api/users/student-stats')
   }
 }
 
@@ -103,6 +113,11 @@ export const topicApi = {
   // 获取课题统计
   getTopicStats() {
     return request.get('/api/topics/stats')
+  },
+  
+  // 获取指定教师的课题统计
+  getTopicStatsByTeacher(teacherId) {
+    return request.get(`/api/topics/teacher/${teacherId}/stats`)
   }
 }
 

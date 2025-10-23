@@ -1,5 +1,6 @@
 package com.example.thesisconnectback.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.thesisconnectback.entity.User;
 import com.example.thesisconnectback.mapper.UserMapper;
@@ -150,5 +151,37 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         trendData.put("period", period);
         
         return trendData;
+    }
+    
+    @Override
+    public List<User> getStudentsByTeacher(Long teacherId) {
+        // 通过选题表关联查询选择该教师课题的学生
+        return userMapper.getStudentsByTeacher(teacherId);
+    }
+    
+    @Override
+    public Map<String, Object> getStudentStats() {
+        Map<String, Object> stats = new HashMap<>();
+        
+        // 获取总学生数
+        QueryWrapper<User> totalQuery = new QueryWrapper<>();
+        totalQuery.eq("role", "student").eq("deleted", 0);
+        long totalStudents = count(totalQuery);
+        
+        // 获取活跃学生数（有选题的学生）
+        List<User> activeStudents = userMapper.getActiveStudents();
+        
+        // 获取已完成学生数
+        List<User> completedStudents = userMapper.getCompletedStudents();
+        
+        // 计算平均进度
+        Double avgProgress = userMapper.getAverageProgress();
+        
+        stats.put("totalStudents", totalStudents);
+        stats.put("activeStudents", activeStudents.size());
+        stats.put("completedStudents", completedStudents.size());
+        stats.put("avgProgress", avgProgress != null ? avgProgress : 0);
+        
+        return stats;
     }
 }

@@ -281,9 +281,9 @@ public class TopicController {
     @GetMapping("/stats")
     public Result<Map<String, Object>> getTopicStats(HttpServletRequest request) {
         try {
-            // 检查权限（只有管理员可以查看统计信息）
+            // 检查权限（管理员和教师都可以查看统计信息）
             String role = (String) request.getAttribute("role");
-            if (!"admin".equals(role)) {
+            if (!"admin".equals(role) && !"teacher".equals(role)) {
                 return Result.forbidden("权限不足");
             }
 
@@ -292,6 +292,28 @@ public class TopicController {
         } catch (Exception e) {
             log.error("获取课题统计信息失败：", e);
             return Result.error("获取课题统计信息失败");
+        }
+    }
+    
+    /**
+     * 获取指定教师的课题统计信息
+     */
+    @GetMapping("/teacher/{teacherId}/stats")
+    public Result<Map<String, Object>> getTopicStatsByTeacher(@PathVariable Long teacherId, HttpServletRequest request) {
+        try {
+            // 检查权限（管理员和教师本人可以查看）
+            String role = (String) request.getAttribute("role");
+            Long userId = (Long) request.getAttribute("userId");
+            
+            if (!"admin".equals(role) && !userId.equals(teacherId)) {
+                return Result.forbidden("权限不足");
+            }
+
+            Map<String, Object> stats = topicService.getTopicStatsByTeacher(teacherId);
+            return Result.success(stats);
+        } catch (Exception e) {
+            log.error("获取教师课题统计信息失败：", e);
+            return Result.error("获取教师课题统计信息失败");
         }
     }
 }

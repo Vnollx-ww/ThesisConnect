@@ -304,4 +304,67 @@ public class UserController {
             return Result.error("获取用户统计信息失败");
         }
     }
+    
+    /**
+     * 根据教师获取学生列表
+     */
+    @GetMapping("/teacher/{teacherId}/students")
+    public Result<List<User>> getStudentsByTeacher(@PathVariable Long teacherId, HttpServletRequest request) {
+        try {
+            // 权限检查：只有管理员或教师本人可以查看
+            User currentUser = getCurrentUser(request);
+            if (currentUser == null) {
+                return Result.error("未登录");
+            }
+            
+            if (!"admin".equals(currentUser.getRole()) && !teacherId.equals(currentUser.getId())) {
+                return Result.error("无权限访问");
+            }
+            
+            List<User> students = userService.getStudentsByTeacher(teacherId);
+            return Result.success(students);
+        } catch (Exception e) {
+            log.error("获取教师学生列表失败：", e);
+            return Result.error("获取教师学生列表失败");
+        }
+    }
+    
+    /**
+     * 获取学生统计信息
+     */
+    @GetMapping("/student-stats")
+    public Result<Map<String, Object>> getStudentStats(HttpServletRequest request) {
+        try {
+            // 权限检查：只有管理员或教师可以查看
+            User currentUser = getCurrentUser(request);
+            if (currentUser == null) {
+                return Result.error("未登录");
+            }
+            
+            if (!"admin".equals(currentUser.getRole()) && !"teacher".equals(currentUser.getRole())) {
+                return Result.error("无权限访问");
+            }
+            
+            Map<String, Object> stats = userService.getStudentStats();
+            return Result.success(stats);
+        } catch (Exception e) {
+            log.error("获取学生统计信息失败：", e);
+            return Result.error("获取学生统计信息失败");
+        }
+    }
+    
+    /**
+     * 获取当前登录用户
+     */
+    private User getCurrentUser(HttpServletRequest request) {
+        try {
+            Long userId = (Long) request.getAttribute("userId");
+            if (userId != null) {
+                return userService.getById(userId);
+            }
+        } catch (Exception e) {
+            log.error("获取当前用户失败：", e);
+        }
+        return null;
+    }
 }

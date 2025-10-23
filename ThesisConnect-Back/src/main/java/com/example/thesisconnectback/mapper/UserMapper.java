@@ -76,4 +76,37 @@ public interface UserMapper extends BaseMapper<User> {
         "</script>"
     })
     List<Map<String, Object>> getUserGrowthTrend(@Param("period") String period);
+    
+    /**
+     * 根据教师获取学生列表
+     */
+    @Select("SELECT DISTINCT u.* FROM sys_user u " +
+            "INNER JOIN sys_selection s ON u.id = s.student_id " +
+            "INNER JOIN sys_topic t ON s.topic_id = t.id " +
+            "WHERE t.teacher_id = #{teacherId} AND u.role = 'student' AND u.deleted = 0")
+    List<User> getStudentsByTeacher(@Param("teacherId") Long teacherId);
+    
+    /**
+     * 获取活跃学生（有选题的学生）
+     */
+    @Select("SELECT DISTINCT u.* FROM sys_user u " +
+            "INNER JOIN sys_selection s ON u.id = s.student_id " +
+            "WHERE u.role = 'student' AND u.deleted = 0 AND s.status = 'active'")
+    List<User> getActiveStudents();
+    
+    /**
+     * 获取已完成学生
+     */
+    @Select("SELECT DISTINCT u.* FROM sys_user u " +
+            "INNER JOIN sys_selection s ON u.id = s.student_id " +
+            "WHERE u.role = 'student' AND u.deleted = 0 AND s.status = 'completed'")
+    List<User> getCompletedStudents();
+    
+    /**
+     * 获取平均进度
+     */
+    @Select("SELECT AVG(s.progress) FROM sys_selection s " +
+            "INNER JOIN sys_user u ON s.student_id = u.id " +
+            "WHERE u.role = 'student' AND u.deleted = 0 AND s.status = 'active'")
+    Double getAverageProgress();
 }

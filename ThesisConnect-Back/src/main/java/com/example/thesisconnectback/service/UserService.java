@@ -70,4 +70,14 @@ public interface UserService extends IService<User> {
      * 获取用户增长趋势
      */
     Map<String, Object> getUserGrowthTrend(String period);
+    
+    /**
+     * 根据教师获取学生列表
+     */
+    List<User> getStudentsByTeacher(Long teacherId);
+    
+    /**
+     * 获取学生统计信息
+     */
+    Map<String, Object> getStudentStats();
 }

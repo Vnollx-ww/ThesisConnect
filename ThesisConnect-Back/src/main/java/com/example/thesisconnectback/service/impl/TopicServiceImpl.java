@@ -149,4 +149,74 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
         
         return distributionData;
     }
+    
+    @Override
+    public Map<String, Object> getTopicStatsByTeacher(Long teacherId) {
+        Map<String, Object> stats = new HashMap<>();
+        
+        // 获取该教师的总课题数
+        QueryWrapper<Topic> totalQuery = new QueryWrapper<>();
+        totalQuery.eq("teacher_id", teacherId).eq("deleted", 0);
+        long totalTopics = count(totalQuery);
+        stats.put("totalTopics", totalTopics);
+        
+        // 各状态课题数
+        QueryWrapper<Topic> activeQuery = new QueryWrapper<>();
+        activeQuery.eq("teacher_id", teacherId).eq("status", "active").eq("deleted", 0);
+        long activeTopics = count(activeQuery);
+        
+        QueryWrapper<Topic> completedQuery = new QueryWrapper<>();
+        completedQuery.eq("teacher_id", teacherId).eq("status", "completed").eq("deleted", 0);
+        long completedTopics = count(completedQuery);
+        
+        QueryWrapper<Topic> pausedQuery = new QueryWrapper<>();
+        pausedQuery.eq("teacher_id", teacherId).eq("status", "paused").eq("deleted", 0);
+        long pausedTopics = count(pausedQuery);
+        
+        stats.put("activeTopics", activeTopics);
+        stats.put("completedTopics", completedTopics);
+        stats.put("pausedTopics", pausedTopics);
+        
+        // 各难度课题数
+        QueryWrapper<Topic> easyQuery = new QueryWrapper<>();
+        easyQuery.eq("teacher_id", teacherId).eq("difficulty", "easy").eq("deleted", 0);
+        long easyTopics = count(easyQuery);
+        
+        QueryWrapper<Topic> mediumQuery = new QueryWrapper<>();
+        mediumQuery.eq("teacher_id", teacherId).eq("difficulty", "medium").eq("deleted", 0);
+        long mediumTopics = count(mediumQuery);
+        
+        QueryWrapper<Topic> hardQuery = new QueryWrapper<>();
+        hardQuery.eq("teacher_id", teacherId).eq("difficulty", "hard").eq("deleted", 0);
+        long hardTopics = count(hardQuery);
+        
+        stats.put("easyTopics", easyTopics);
+        stats.put("mediumTopics", mediumTopics);
+        stats.put("hardTopics", hardTopics);
+        
+        // 计算已选学生总数
+        QueryWrapper<Topic> studentsQuery = new QueryWrapper<>();
+        studentsQuery.eq("teacher_id", teacherId).eq("deleted", 0);
+        List<Topic> teacherTopics = list(studentsQuery);
+        int totalStudents = teacherTopics.stream()
+                .mapToInt(topic -> topic.getSelectedCount() != null ? topic.getSelectedCount() : 0)
+                .sum();
+        stats.put("totalStudents", totalStudents);
+        
+        // 计算平均评分
+        double avgRating = teacherTopics.stream()
+                .filter(topic -> topic.getRating() != null && topic.getRating() > 0)
+                .mapToDouble(Topic::getRating)
+                .average()
+                .orElse(0.0);
+        stats.put("avgRating", Math.round(avgRating * 10.0) / 10.0);
+        
+        // 计算总浏览量
+        int totalViews = teacherTopics.stream()
+                .mapToInt(topic -> topic.getViewCount() != null ? topic.getViewCount() : 0)
+                .sum();
+        stats.put("totalViews", totalViews);
+        
+        return stats;
+    }
 }

@@ -127,10 +127,11 @@
           <el-table-column prop="lastUpdate" label="最后更新" width="120"></el-table-column>
           <el-table-column prop="phone" label="联系电话" width="120"></el-table-column>
           <el-table-column prop="email" label="邮箱" width="150"></el-table-column>
-          <el-table-column label="操作" width="200">
+          <el-table-column label="操作" width="280">
             <template slot-scope="scope">
               <el-button type="text" size="small" @click="viewStudentDetail(scope.row)">详情</el-button>
-              <el-button type="text" size="small" @click="sendMessage(scope.row)">消息</el-button>
+              <el-button type="text" size="small" @click="updateProgress(scope.row)">更新进度</el-button>
+              <el-button type="text" size="small" @click="sendMessage(scope.row)">发送消息</el-button>
               <el-button type="text" size="small" @click="evaluateStudent(scope.row)">评价</el-button>
             </template>
           </el-table-column>

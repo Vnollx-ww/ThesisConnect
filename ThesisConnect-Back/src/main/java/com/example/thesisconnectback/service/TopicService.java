@@ -65,6 +65,11 @@ public interface TopicService extends IService<Topic> {
      * 获取课题统计信息
      */
     Map<String, Object> getTopicStats();
+    
+    /**
+     * 获取指定教师的课题统计信息
+     */
+    Map<String, Object> getTopicStatsByTeacher(Long teacherId);
 
     /**
      * 获取热门课题
