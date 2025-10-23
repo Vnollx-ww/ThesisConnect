@@ -307,18 +307,12 @@
             </el-form-item>
           </el-col>
         </el-row>
-        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="最大人数" prop="maxStudents">
-              <el-input-number v-model="addForm.maxStudents" :min="1" :max="10"></el-input-number>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="截止时间">
-              <el-date-picker v-model="addForm.deadline" type="date" placeholder="选择截止时间"></el-date-picker>
-            </el-form-item>
-          </el-col>
-        </el-row>
+        <el-form-item label="最大人数" prop="maxStudents">
+          <el-input-number v-model="addForm.maxStudents" :min="1" :max="10"></el-input-number>
+        </el-form-item>
+        <el-form-item label="截止时间">
+          <el-date-picker v-model="addForm.deadline" type="date" placeholder="选择截止时间" style="width: 100%"></el-date-picker>
+        </el-form-item>
         <el-form-item label="技术要求">
           <el-input v-model="addForm.requirements" type="textarea" :rows="2" placeholder="请输入技术要求"></el-input>
         </el-form-item>
@@ -367,23 +361,23 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="截止时间">
-              <el-date-picker v-model="editForm.deadline" type="date"></el-date-picker>
+            <el-form-item label="状态">
+              <el-select v-model="editForm.status">
+                <el-option label="进行中" value="active"></el-option>
+                <el-option label="已完成" value="completed"></el-option>
+                <el-option label="已暂停" value="paused"></el-option>
+              </el-select>
             </el-form-item>
           </el-col>
         </el-row>
+        <el-form-item label="截止时间">
+          <el-date-picker v-model="editForm.deadline" type="date" style="width: 100%"></el-date-picker>
+        </el-form-item>
         <el-form-item label="技术要求">
           <el-input v-model="editForm.requirements" type="textarea" :rows="2"></el-input>
         </el-form-item>
         <el-form-item label="预期成果">
           <el-input v-model="editForm.expectedOutcome" type="textarea" :rows="2"></el-input>
-        </el-form-item>
-        <el-form-item label="状态">
-          <el-select v-model="editForm.status">
-            <el-option label="进行中" value="active"></el-option>
-            <el-option label="已完成" value="completed"></el-option>
-            <el-option label="已暂停" value="paused"></el-option>
-          </el-select>
         </el-form-item>
       </el-form>
       <span slot="footer" class="dialog-footer">
@@ -611,7 +605,12 @@ export default {
         }
       } catch (error) {
         console.error('更新课题信息失败:', error);
-        this.$message.error('更新失败，请重试');
+        // 检查是否是后端返回的错误信息
+        if (error.response && error.response.data && error.response.data.message) {
+          this.$message.error(error.response.data.message);
+        } else {
+          this.$message.error('更新失败，请重试');
+        }
       }
     },
     
@@ -630,7 +629,12 @@ export default {
             }
           } catch (error) {
             console.error('添加课题失败:', error);
-            this.$message.error('添加失败，请重试');
+            // 检查是否是后端返回的错误信息
+            if (error.response && error.response.data && error.response.data.message) {
+              this.$message.error(error.response.data.message);
+            } else {
+              this.$message.error('添加失败，请重试');
+            }
           }
         }
       });
@@ -684,7 +688,12 @@ export default {
           }
         } catch (error) {
           console.error('删除课题失败:', error);
-          this.$message.error('删除失败');
+          // 检查是否是后端返回的错误信息
+          if (error.response && error.response.data && error.response.data.message) {
+            this.$message.error(error.response.data.message);
+          } else {
+            this.$message.error('删除失败');
+          }
         }
       });
     },

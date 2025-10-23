@@ -148,7 +148,16 @@ public class UserController {
                 return Result.notFound("用户不存在");
             }
 
+            // 检查用户名是否已存在（排除当前用户）
+            if (!existingUser.getUsername().equals(user.getUsername())) {
+                User userWithSameUsername = userService.findByUsername(user.getUsername());
+                if (userWithSameUsername != null && !userWithSameUsername.getId().equals(id)) {
+                    return Result.error("用户名已存在");
+                }
+            }
+
             // 更新用户信息
+            existingUser.setUsername(user.getUsername());
             existingUser.setRealName(user.getRealName());
             existingUser.setEmail(user.getEmail());
             existingUser.setPhone(user.getPhone());

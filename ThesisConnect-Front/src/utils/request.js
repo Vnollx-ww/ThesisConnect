@@ -64,8 +64,11 @@ service.interceptors.response.use(
                 })
             }
             
-            // 创建包含原始错误信息的Error对象
-            return Promise.reject(new Error(errorMsg))
+            // 创建包含原始错误信息的Error对象，保留响应数据
+            const error = new Error(errorMsg)
+            error.response = response
+            error.response.data = res
+            return Promise.reject(error)
         }
         return res
     },

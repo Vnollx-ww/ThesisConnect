@@ -3,10 +3,6 @@
     <div class="page-header">
       <h2 class="page-title">用户管理</h2>
       <p class="page-desc">管理系统中的所有用户，包括学生、教师和管理员</p>
-      <el-button type="primary" @click="addUser" class="add-user-btn">
-        <i class="el-icon-plus"></i>
-        添加用户
-      </el-button>
     </div>
     
     <!-- 用户统计概览 -->
@@ -88,12 +84,6 @@
         <el-col :span="4">
           <el-button @click="resetFilter">重置筛选</el-button>
         </el-col>
-        <el-col :span="6">
-          <el-button type="primary" @click="batchOperation">
-            <i class="el-icon-s-operation"></i>
-            批量操作
-          </el-button>
-        </el-col>
       </el-row>
     </div>
     
@@ -102,6 +92,10 @@
       <div class="section-header">
         <h3>用户列表</h3>
         <div class="header-actions">
+          <el-button type="primary" @click="addUser">
+            <i class="el-icon-plus"></i>
+            添加用户
+          </el-button>
           <el-button @click="exportUsers">
             <i class="el-icon-download"></i>
             导出用户
@@ -109,6 +103,10 @@
           <el-button @click="importUsers">
             <i class="el-icon-upload"></i>
             导入用户
+          </el-button>
+          <el-button type="primary" @click="batchOperation">
+            <i class="el-icon-s-operation"></i>
+            批量操作
           </el-button>
         </div>
       </div>
@@ -563,7 +561,12 @@ export default {
           }
           } catch (error) {
             console.error('提交用户信息失败:', error);
-            this.$message.error('操作失败，请重试');
+            // 检查是否是后端返回的错误信息
+            if (error.response && error.response.data && error.response.data.message) {
+              this.$message.error(error.response.data.message);
+            } else {
+              this.$message.error('操作失败，请重试');
+            }
           }
         }
       });
@@ -702,9 +705,6 @@ export default {
 }
 
 .page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
   margin-bottom: 30px;
 }
 
@@ -719,10 +719,6 @@ export default {
   color: #7f8c8d;
   margin: 0;
   font-size: 14px;
-}
-
-.add-user-btn {
-  margin-top: 10px;
 }
 
 .stats-overview {
