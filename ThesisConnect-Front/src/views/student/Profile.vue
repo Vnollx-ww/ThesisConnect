@@ -1,0 +1,563 @@
+<template>
+  <div class="student-profile">
+    <div class="page-header">
+      <h2 class="page-title">个人信息</h2>
+      <p class="page-desc">管理您的个人资料和账户设置</p>
+    </div>
+    
+    <el-row :gutter="20">
+      <!-- 左侧：个人信息卡片 -->
+      <el-col :span="8">
+        <div class="profile-card">
+          <div class="profile-header">
+            <div class="avatar-section">
+              <el-avatar :size="80" :src="userInfo.avatar">
+                <i class="el-icon-user-solid"></i>
+              </el-avatar>
+              <el-button type="text" @click="changeAvatar" class="change-avatar-btn">
+                更换头像
+              </el-button>
+            </div>
+            <div class="user-basic-info">
+              <h3>{{ userInfo.name }}</h3>
+              <p class="user-id">学号：{{ userInfo.studentId }}</p>
+              <p class="user-major">{{ userInfo.major }}</p>
+            </div>
+          </div>
+          
+          <div class="profile-stats">
+            <div class="stat-item">
+              <span class="stat-number">{{ userInfo.gpa }}</span>
+              <span class="stat-label">GPA</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-number">{{ userInfo.credits }}</span>
+              <span class="stat-label">学分</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-number">{{ userInfo.rank }}</span>
+              <span class="stat-label">排名</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 快捷操作 -->
+        <div class="quick-actions">
+          <h4>快捷操作</h4>
+          <el-button type="primary" @click="editProfile" class="action-btn">
+            <i class="el-icon-edit"></i>
+            编辑资料
+          </el-button>
+          <el-button @click="changePassword" class="action-btn">
+            <i class="el-icon-lock"></i>
+            修改密码
+          </el-button>
+          <el-button @click="exportData" class="action-btn">
+            <i class="el-icon-download"></i>
+            导出数据
+          </el-button>
+        </div>
+      </el-col>
+      
+      <!-- 右侧：详细信息 -->
+      <el-col :span="16">
+        <el-tabs v-model="activeTab" type="card">
+          <!-- 基本信息 -->
+          <el-tab-pane label="基本信息" name="basic">
+            <div class="info-section">
+              <el-form :model="userInfo" label-width="100px" class="info-form">
+                <el-row :gutter="20">
+                  <el-col :span="12">
+                    <el-form-item label="姓名">
+                      <el-input v-model="userInfo.name" :disabled="!isEditing"></el-input>
+                    </el-form-item>
+                  </el-col>
+                  <el-col :span="12">
+                    <el-form-item label="学号">
+                      <el-input v-model="userInfo.studentId" disabled></el-input>
+                    </el-form-item>
+                  </el-col>
+                </el-row>
+                
+                <el-row :gutter="20">
+                  <el-col :span="12">
+                    <el-form-item label="性别">
+                      <el-select v-model="userInfo.gender" :disabled="!isEditing">
+                        <el-option label="男" value="male"></el-option>
+                        <el-option label="女" value="female"></el-option>
+                      </el-select>
+                    </el-form-item>
+                  </el-col>
+                  <el-col :span="12">
+                    <el-form-item label="出生日期">
+                      <el-date-picker
+                        v-model="userInfo.birthday"
+                        type="date"
+                        placeholder="选择日期"
+                        :disabled="!isEditing">
+                      </el-date-picker>
+                    </el-form-item>
+                  </el-col>
+                </el-row>
+                
+                <el-row :gutter="20">
+                  <el-col :span="12">
+                    <el-form-item label="专业">
+                      <el-input v-model="userInfo.major" disabled></el-input>
+                    </el-form-item>
+                  </el-col>
+                  <el-col :span="12">
+                    <el-form-item label="班级">
+                      <el-input v-model="userInfo.class" :disabled="!isEditing"></el-input>
+                    </el-form-item>
+                  </el-col>
+                </el-row>
+                
+                <el-form-item label="联系电话">
+                  <el-input v-model="userInfo.phone" :disabled="!isEditing"></el-input>
+                </el-form-item>
+                
+                <el-form-item label="邮箱">
+                  <el-input v-model="userInfo.email" :disabled="!isEditing"></el-input>
+                </el-form-item>
+                
+                <el-form-item label="家庭地址">
+                  <el-input v-model="userInfo.address" type="textarea" :disabled="!isEditing"></el-input>
+                </el-form-item>
+              </el-form>
+            </div>
+          </el-tab-pane>
+          
+          <!-- 学术信息 -->
+          <el-tab-pane label="学术信息" name="academic">
+            <div class="info-section">
+              <el-form :model="academicInfo" label-width="120px" class="info-form">
+                <el-row :gutter="20">
+                  <el-col :span="12">
+                    <el-form-item label="入学年份">
+                      <el-input v-model="academicInfo.enrollmentYear" disabled></el-input>
+                    </el-form-item>
+                  </el-col>
+                  <el-col :span="12">
+                    <el-form-item label="预计毕业">
+                      <el-input v-model="academicInfo.graduationYear" disabled></el-input>
+                    </el-form-item>
+                  </el-col>
+                </el-row>
+                
+                <el-row :gutter="20">
+                  <el-col :span="12">
+                    <el-form-item label="当前GPA">
+                      <el-input v-model="academicInfo.gpa" disabled></el-input>
+                    </el-form-item>
+                  </el-col>
+                  <el-col :span="12">
+                    <el-form-item label="已修学分">
+                      <el-input v-model="academicInfo.credits" disabled></el-input>
+                    </el-form-item>
+                  </el-col>
+                </el-row>
+                
+                <el-row :gutter="20">
+                  <el-col :span="12">
+                    <el-form-item label="专业排名">
+                      <el-input v-model="academicInfo.rank" disabled></el-input>
+                    </el-form-item>
+                  </el-col>
+                  <el-col :span="12">
+                    <el-form-item label="奖学金">
+                      <el-input v-model="academicInfo.scholarship" :disabled="!isEditing"></el-input>
+                    </el-form-item>
+                  </el-col>
+                </el-row>
+                
+                <el-form-item label="获奖情况">
+                  <el-input 
+                    v-model="academicInfo.awards" 
+                    type="textarea" 
+                    :rows="3"
+                    :disabled="!isEditing">
+                  </el-input>
+                </el-form-item>
+                
+                <el-form-item label="研究兴趣">
+                  <el-input 
+                    v-model="academicInfo.interests" 
+                    type="textarea" 
+                    :rows="3"
+                    :disabled="!isEditing">
+                  </el-input>
+                </el-form-item>
+              </el-form>
+            </div>
+          </el-tab-pane>
+          
+          <!-- 账户设置 -->
+          <el-tab-pane label="账户设置" name="account">
+            <div class="info-section">
+              <div class="setting-item">
+                <div class="setting-content">
+                  <h4>修改密码</h4>
+                  <p>定期修改密码可以保护您的账户安全</p>
+                </div>
+                <el-button @click="changePassword">修改</el-button>
+              </div>
+              
+              <div class="setting-item">
+                <div class="setting-content">
+                  <h4>邮箱验证</h4>
+                  <p>当前邮箱：{{ userInfo.email }}</p>
+                </div>
+                <el-button @click="verifyEmail">验证</el-button>
+              </div>
+              
+              <div class="setting-item">
+                <div class="setting-content">
+                  <h4>手机验证</h4>
+                  <p>当前手机：{{ userInfo.phone }}</p>
+                </div>
+                <el-button @click="verifyPhone">验证</el-button>
+              </div>
+              
+              <div class="setting-item">
+                <div class="setting-content">
+                  <h4>数据导出</h4>
+                  <p>导出您的个人数据和学习记录</p>
+                </div>
+                <el-button @click="exportData">导出</el-button>
+              </div>
+            </div>
+          </el-tab-pane>
+        </el-tabs>
+        
+        <!-- 操作按钮 -->
+        <div class="form-actions" v-if="isEditing">
+          <el-button @click="cancelEdit">取消</el-button>
+          <el-button type="primary" @click="saveProfile">保存</el-button>
+        </div>
+      </el-col>
+    </el-row>
+    
+    <!-- 修改密码对话框 -->
+    <el-dialog
+      title="修改密码"
+      :visible.sync="passwordDialogVisible"
+      width="400px">
+      <el-form :model="passwordForm" :rules="passwordRules" ref="passwordForm" label-width="100px">
+        <el-form-item label="当前密码" prop="currentPassword">
+          <el-input v-model="passwordForm.currentPassword" type="password"></el-input>
+        </el-form-item>
+        <el-form-item label="新密码" prop="newPassword">
+          <el-input v-model="passwordForm.newPassword" type="password"></el-input>
+        </el-form-item>
+        <el-form-item label="确认密码" prop="confirmPassword">
+          <el-input v-model="passwordForm.confirmPassword" type="password"></el-input>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="passwordDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitPassword">确定</el-button>
+      </span>
+    </el-dialog>
+  </div>
+</template>
+
+<script>
+export default {
+  name: 'StudentProfile',
+  data() {
+    return {
+      activeTab: 'basic',
+      isEditing: false,
+      passwordDialogVisible: false,
+      
+      passwordForm: {
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      },
+      
+      passwordRules: {
+        currentPassword: [
+          { required: true, message: '请输入当前密码', trigger: 'blur' }
+        ],
+        newPassword: [
+          { required: true, message: '请输入新密码', trigger: 'blur' },
+          { min: 6, max: 20, message: '密码长度在 6 到 20 个字符', trigger: 'blur' }
+        ],
+        confirmPassword: [
+          { required: true, message: '请确认新密码', trigger: 'blur' },
+          { validator: this.validateConfirmPassword, trigger: 'blur' }
+        ]
+      },
+      
+      // 用户基本信息
+      userInfo: {
+        name: '张三',
+        studentId: '2021001001',
+        gender: 'male',
+        birthday: '2002-05-15',
+        major: '计算机科学与技术',
+        class: '计科2101班',
+        phone: '13800138000',
+        email: 'zhangsan@example.com',
+        address: '北京市海淀区中关村大街1号',
+        avatar: '',
+        gpa: '3.8',
+        credits: '120',
+        rank: '15'
+      },
+      
+      // 学术信息
+      academicInfo: {
+        enrollmentYear: '2021',
+        graduationYear: '2025',
+        gpa: '3.8',
+        credits: '120',
+        rank: '15',
+        scholarship: '国家励志奖学金',
+        awards: '2023年ACM程序设计竞赛二等奖\n2022年数学建模竞赛三等奖',
+        interests: '机器学习、深度学习、计算机视觉、自然语言处理'
+      }
+    }
+  },
+  methods: {
+    validateConfirmPassword(rule, value, callback) {
+      if (value !== this.passwordForm.newPassword) {
+        callback(new Error('两次输入密码不一致'));
+      } else {
+        callback();
+      }
+    },
+    
+    editProfile() {
+      this.isEditing = true;
+    },
+    
+    cancelEdit() {
+      this.isEditing = false;
+      this.$message.info('已取消编辑');
+    },
+    
+    saveProfile() {
+      this.isEditing = false;
+      this.$message.success('个人信息保存成功！');
+    },
+    
+    changeAvatar() {
+      this.$message.info('头像上传功能开发中...');
+    },
+    
+    changePassword() {
+      this.passwordForm = {
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      };
+      this.passwordDialogVisible = true;
+    },
+    
+    submitPassword() {
+      this.$refs.passwordForm.validate((valid) => {
+        if (valid) {
+          this.passwordDialogVisible = false;
+          this.$message.success('密码修改成功！');
+        }
+      });
+    },
+    
+    verifyEmail() {
+      this.$message.info('邮箱验证功能开发中...');
+    },
+    
+    verifyPhone() {
+      this.$message.info('手机验证功能开发中...');
+    },
+    
+    exportData() {
+      this.$message.info('数据导出功能开发中...');
+    }
+  }
+}
+</script>
+
+<style scoped>
+.student-profile {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.page-header {
+  margin-bottom: 30px;
+}
+
+.page-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0 0 8px 0;
+}
+
+.page-desc {
+  color: #7f8c8d;
+  margin: 0;
+  font-size: 14px;
+}
+
+.profile-card {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.avatar-section {
+  text-align: center;
+  margin-right: 20px;
+}
+
+.change-avatar-btn {
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.user-basic-info h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0 0 5px 0;
+}
+
+.user-id,
+.user-major {
+  color: #7f8c8d;
+  margin: 0 0 3px 0;
+  font-size: 14px;
+}
+
+.profile-stats {
+  display: flex;
+  justify-content: space-around;
+  border-top: 1px solid #f0f0f0;
+  padding-top: 15px;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-number {
+  display: block;
+  font-size: 20px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #7f8c8d;
+}
+
+.quick-actions {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.quick-actions h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0 0 15px 0;
+}
+
+.action-btn {
+  width: 100%;
+  margin-bottom: 10px;
+  justify-content: flex-start;
+}
+
+.action-btn i {
+  margin-right: 8px;
+}
+
+.info-section {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.info-form {
+  max-width: 600px;
+}
+
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.setting-item:last-child {
+  border-bottom: none;
+}
+
+.setting-content h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0 0 5px 0;
+}
+
+.setting-content p {
+  color: #7f8c8d;
+  margin: 0;
+  font-size: 14px;
+}
+
+.form-actions {
+  margin-top: 20px;
+  text-align: right;
+}
+
+.form-actions .el-button {
+  margin-left: 10px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .profile-header {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .avatar-section {
+    margin-right: 0;
+    margin-bottom: 15px;
+  }
+  
+  .profile-stats {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .setting-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .setting-item .el-button {
+    margin-top: 10px;
+  }
+}
+</style>
