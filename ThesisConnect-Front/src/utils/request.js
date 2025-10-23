@@ -47,10 +47,11 @@ service.interceptors.response.use(
             // 直接返回后端的错误信息，不在拦截器中显示
             const errorMsg = res.message || res.msg || '请求错误'
             
-            // 只处理401未授权情况
-            if (code === 401) {
-                // 未授权，清除本地token并跳转登录
+            // 处理权限相关错误（401未授权，403权限不足）
+            if (code === 401 || code === 403 || errorMsg.includes('权限') || errorMsg.includes('登录')) {
+                // 权限不足或未授权，清除本地token并跳转登录
                 localStorage.removeItem('token');
+                localStorage.removeItem('userId');
                 // 避免循环依赖，直接使用 location
                 if (location.hash !== '#/login') {
                     location.hash = '#/login'

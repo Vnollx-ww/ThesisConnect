@@ -14,7 +14,7 @@ public interface ProgressService extends IService<Progress> {
     /**
      * 更新进度
      */
-    boolean updateProgress(Long selectionId, Integer percentage, String description, String problems, Long studentId, String studentName);
+    boolean updateProgress(Long selectionId, String milestoneTitle, String milestoneStatus, Integer percentage, String description, String problems, Long studentId, String studentName);
 
     /**
      * 添加里程碑
@@ -40,6 +40,11 @@ public interface ProgressService extends IService<Progress> {
      * 获取最新进度
      */
     Progress getLatestProgress(Long selectionId);
+
+    /**
+     * 更新里程碑状态
+     */
+    boolean updateMilestoneStatus(Long milestoneId, String milestoneStatus);
 
     /**
      * 获取进度统计信息

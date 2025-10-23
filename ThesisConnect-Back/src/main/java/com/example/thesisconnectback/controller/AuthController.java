@@ -158,6 +158,53 @@ public class AuthController {
     }
 
     /**
+     * 更新当前用户信息
+     */
+    @PutMapping("/userinfo")
+    public Result<User> updateUserInfo(@RequestBody Map<String, Object> userData, HttpServletRequest request) {
+        try {
+            Long userId = (Long) request.getAttribute("userId");
+            User existingUser = userService.getById(userId);
+            
+            if (existingUser == null) {
+                return Result.notFound("用户不存在");
+            }
+
+            // 更新用户信息（只更新User实体类中实际存在的字段）
+            if (userData.containsKey("realName")) {
+                existingUser.setRealName((String) userData.get("realName"));
+            }
+            if (userData.containsKey("email")) {
+                existingUser.setEmail((String) userData.get("email"));
+            }
+            if (userData.containsKey("phone")) {
+                existingUser.setPhone((String) userData.get("phone"));
+            }
+            if (userData.containsKey("department")) {
+                existingUser.setDepartment((String) userData.get("department"));
+            }
+            if (userData.containsKey("studentId")) {
+                existingUser.setStudentId((String) userData.get("studentId"));
+            }
+            if (userData.containsKey("avatar")) {
+                existingUser.setAvatar((String) userData.get("avatar"));
+            }
+
+            boolean success = userService.updateById(existingUser);
+            if (success) {
+                // 清除敏感信息
+                existingUser.setPassword(null);
+                return Result.success(existingUser, "用户信息更新成功");
+            } else {
+                return Result.error("用户信息更新失败");
+            }
+        } catch (Exception e) {
+            log.error("更新用户信息失败：", e);
+            return Result.error("更新用户信息失败：" + e.getMessage());
+        }
+    }
+
+    /**
      * 用户登出
      */
     @PostMapping("/logout")

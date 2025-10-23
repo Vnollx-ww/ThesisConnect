@@ -271,6 +271,8 @@
 </template>
 
 <script>
+import { authApi, userApi } from '@/api'
+
 export default {
   name: 'TeacherProfile',
   data() {
@@ -309,34 +311,78 @@ export default {
       
       // 用户基本信息
       userInfo: {
-        name: '李教授',
-        teacherId: 'T2021001',
-        gender: 'male',
-        birthday: '1980-03-15',
-        title: '教授',
-        department: '计算机科学与技术学院',
-        phone: '13800138000',
-        email: 'li.professor@university.edu.cn',
-        office: '计算机楼301室',
-        bio: '主要从事人工智能和机器学习领域的研究，发表论文50余篇，主持国家自然科学基金项目3项。',
+        name: '',
+        teacherId: '',
+        gender: '',
+        birthday: '',
+        title: '',
+        department: '',
+        phone: '',
+        email: '',
+        office: '',
+        bio: '',
         avatar: '',
-        topicsCount: 8,
-        studentsCount: 12,
-        rating: 4.5
+        topicsCount: 0,
+        studentsCount: 0,
+        rating: 0
       },
       
       // 学术信息
       academicInfo: {
-        education: 'phd',
-        school: '清华大学',
-        major: '计算机科学与技术',
-        hireDate: '2010-09-01',
-        researchAreas: '人工智能、机器学习、深度学习、计算机视觉',
-        achievements: '发表SCI论文30篇，EI论文20篇，主持国家自然科学基金项目3项，获得省部级科技奖励2项'
+        education: '',
+        school: '',
+        major: '',
+        hireDate: '',
+        researchAreas: '',
+        achievements: ''
       }
     }
   },
+  async mounted() {
+    await this.loadUserInfo()
+  },
   methods: {
+    // 加载用户信息
+    async loadUserInfo() {
+      try {
+        const response = await authApi.getUserInfo()
+        if (response.code === 200 && response.data) {
+          const userData = response.data
+          // 更新用户基本信息
+          this.userInfo = {
+            name: userData.name || userData.username || '',
+            teacherId: userData.teacherNumber || userData.teacherId || '',
+            gender: userData.gender || '',
+            birthday: userData.birthday || '',
+            title: userData.title || '',
+            department: userData.department || '',
+            phone: userData.phone || '',
+            email: userData.email || '',
+            office: userData.office || '',
+            bio: userData.bio || '',
+            avatar: userData.avatar || '',
+            topicsCount: userData.topicsCount || 0,
+            studentsCount: userData.studentsCount || 0,
+            rating: userData.rating || 0
+          }
+          
+          // 更新学术信息
+          this.academicInfo = {
+            education: userData.education || '',
+            school: userData.school || '',
+            major: userData.major || '',
+            hireDate: userData.hireDate || '',
+            researchAreas: userData.researchAreas || '',
+            achievements: userData.achievements || ''
+          }
+        } else {
+          this.$message.error('获取用户信息失败')
+        }
+      } catch (error) {
+        console.error('加载用户信息失败:', error)
+        this.$message.error('加载用户信息失败，请稍后重试')
+      }
+    },
     validateConfirmPassword(rule, value, callback) {
       if (value !== this.passwordForm.newPassword) {
         callback(new Error('两次输入密码不一致'));
@@ -354,9 +400,35 @@ export default {
       this.$message.info('已取消编辑');
     },
     
-    saveProfile() {
-      this.isEditing = false;
-      this.$message.success('个人信息保存成功！');
+    async saveProfile() {
+      try {
+        // 准备更新数据
+        const updateData = {
+          realName: this.userInfo.name,
+          gender: this.userInfo.gender,
+          birthday: this.userInfo.birthday,
+          phone: this.userInfo.phone,
+          email: this.userInfo.email,
+          department: this.userInfo.department,
+          title: this.userInfo.title,
+          office: this.userInfo.office,
+          bio: this.userInfo.bio
+        };
+        
+        const response = await authApi.updateUserInfo(updateData);
+        if (response.code === 200) {
+          this.isEditing = false;
+          this.$message.success('个人信息保存成功！');
+          
+          // 重新加载用户信息以确保数据同步
+          await this.loadUserInfo();
+        } else {
+          this.$message.error(response.message || '保存个人信息失败');
+        }
+      } catch (error) {
+        console.error('保存个人信息失败:', error);
+        this.$message.error('保存个人信息失败，请稍后重试');
+      }
     },
     
     changeAvatar() {

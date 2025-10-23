@@ -262,21 +262,24 @@
 </template>
 
 <script>
+import { statsApi } from '@/api'
+
 export default {
   name: 'AdminDashboard',
   data() {
     return {
       userTrendPeriod: 'month',
+      loading: false,
       
       metrics: {
-        totalUsers: 1256,
-        userGrowth: 12,
-        totalTopics: 89,
-        topicGrowth: 8,
-        totalSelections: 234,
-        selectionGrowth: 15,
-        completionRate: 78,
-        completionGrowth: 5
+        totalUsers: 0,
+        userGrowth: 0,
+        totalTopics: 0,
+        topicGrowth: 0,
+        totalSelections: 0,
+        selectionGrowth: 0,
+        completionRate: 0,
+        completionGrowth: 0
       },
       
       systemStatus: {
@@ -328,10 +331,29 @@ export default {
       ]
     }
   },
-  mounted() {
+  async mounted() {
+    await this.loadDashboardData();
     this.initCharts();
   },
   methods: {
+    // 加载仪表板数据
+    async loadDashboardData() {
+      try {
+        this.loading = true
+        const response = await statsApi.getOverviewStats()
+        if (response.code === 200) {
+          this.metrics = response.data
+        } else {
+          this.$message.error(response.message || '获取统计数据失败')
+        }
+      } catch (error) {
+        console.error('加载仪表板数据失败:', error)
+        this.$message.error('加载仪表板数据失败，请稍后重试')
+      } finally {
+        this.loading = false
+      }
+    },
+    
     setUserTrendPeriod(period) {
       this.userTrendPeriod = period;
       this.initCharts();

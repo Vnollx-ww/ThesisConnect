@@ -59,7 +59,6 @@
     <div v-if="myTopic" class="topic-detail-section">
       <div class="section-header">
         <h3>选题详情</h3>
-        <el-button type="primary" size="small" @click="editProgress">更新进度</el-button>
       </div>
       
       <div class="topic-info-card">
@@ -67,7 +66,7 @@
           <h4>{{ myTopic.title }}</h4>
           <div class="info-row">
             <span class="label">指导教师：</span>
-            <span class="value">{{ myTopic.teacher }}</span>
+            <span class="value">{{ myTopic.teacherName || myTopic.teacher }}</span>
           </div>
           <div class="info-row">
             <span class="label">专业要求：</span>
@@ -81,11 +80,11 @@
           </div>
           <div class="info-row">
             <span class="label">选择时间：</span>
-            <span class="value">{{ myTopic.selectedTime }}</span>
+            <span class="value">{{ formatDateTime(myTopic.selectedTime) }}</span>
           </div>
           <div class="info-row">
             <span class="label">截止时间：</span>
-            <span class="value">{{ myTopic.deadline }}</span>
+            <span class="value">{{ formatDateTime(myTopic.deadline) }}</span>
           </div>
         </div>
         
@@ -97,7 +96,7 @@
         <div class="topic-requirements">
           <h5>技术要求</h5>
           <ul>
-            <li v-for="requirement in myTopic.requirements" :key="requirement">
+            <li v-for="requirement in getRequirementsArray(myTopic.requirements)" :key="requirement">
               {{ requirement }}
             </li>
           </ul>
@@ -109,6 +108,7 @@
     <div v-if="myTopic" class="progress-section">
       <div class="section-header">
         <h3>进度管理</h3>
+        <el-button type="primary" size="small" @click="editProgress">更新进度</el-button>
       </div>
       
       <div class="progress-card">
@@ -126,16 +126,32 @@
             <el-timeline-item
               v-for="(milestone, index) in milestones"
               :key="index"
-              :timestamp="milestone.date"
+              :timestamp="formatDateTime(milestone.date)"
               :type="milestone.status === 'completed' ? 'success' : milestone.status === 'current' ? 'primary' : 'info'">
               <div class="milestone-content">
-                <h4>{{ milestone.title }}</h4>
+                <div class="milestone-header">
+                  <h4>{{ milestone.title }}</h4>
+                  <div class="milestone-actions">
+                    <el-select 
+                      v-model="milestone.status" 
+                      size="mini" 
+                      @change="updateMilestoneStatus(milestone)"
+                      style="width: 80px;">
+                      <el-option label="待开始" value="pending"></el-option>
+                      <el-option label="进行中" value="current"></el-option>
+                      <el-option label="已完成" value="completed"></el-option>
+                    </el-select>
+                  </div>
+                </div>
                 <p>{{ milestone.description }}</p>
-                <el-tag 
-                  :type="milestone.status === 'completed' ? 'success' : milestone.status === 'current' ? 'primary' : 'info'"
-                  size="small">
-                  {{ getStatusText(milestone.status) }}
-                </el-tag>
+                <div class="milestone-footer">
+                  <el-tag 
+                    :type="milestone.status === 'completed' ? 'success' : milestone.status === 'current' ? 'primary' : 'info'"
+                    size="small">
+                    {{ getStatusText(milestone.status) }}
+                  </el-tag>
+                  <span class="progress-text">进度: {{ milestone.percentage }}%</span>
+                </div>
               </div>
             </el-timeline-item>
           </el-timeline>
@@ -189,6 +205,19 @@
       :visible.sync="progressDialogVisible"
       width="500px">
       <el-form :model="progressForm" label-width="100px">
+        <el-form-item label="里程碑标题">
+          <el-input
+            v-model="progressForm.milestoneTitle"
+            placeholder="请输入里程碑标题，如：需求分析、系统设计、编码实现等">
+          </el-input>
+        </el-form-item>
+        <el-form-item label="里程碑状态">
+          <el-select v-model="progressForm.milestoneStatus" placeholder="请选择状态">
+            <el-option label="进行中" value="current"></el-option>
+            <el-option label="已完成" value="completed"></el-option>
+            <el-option label="待开始" value="pending"></el-option>
+          </el-select>
+        </el-form-item>
         <el-form-item label="当前进度">
           <el-slider v-model="progressForm.percentage" :min="0" :max="100"></el-slider>
         </el-form-item>
@@ -218,96 +247,147 @@
 </template>
 
 <script>
+import { selectionApi, progressApi, documentApi, topicApi } from '@/api'
+import { getCurrentUserId } from '@/utils/user'
+
 export default {
   name: 'MyTopic',
   data() {
     return {
+      loading: false,
       progressDialogVisible: false,
       progressForm: {
+        milestoneTitle: '',
+        milestoneStatus: 'current',
         percentage: 0,
         description: '',
         problems: ''
       },
       
-      // 模拟数据
-      myTopic: {
-        id: 1,
-        title: '基于深度学习的图像识别系统',
-        description: '设计并实现一个基于深度学习的图像识别系统，能够识别多种物体和场景。',
-        teacher: '李教授',
-        major: '计算机科学与技术',
-        difficulty: 'hard',
-        selectedTime: '2024-01-15',
-        deadline: '2024-03-15',
-        requirements: ['熟悉Python编程', '了解深度学习框架', '有图像处理基础'],
-        progress: 35
-      },
-      
-      milestones: [
-        {
-          title: '需求分析',
-          description: '完成系统需求分析和功能设计',
-          date: '2024-01-20',
-          status: 'completed'
-        },
-        {
-          title: '技术调研',
-          description: '调研相关技术和算法',
-          date: '2024-02-01',
-          status: 'completed'
-        },
-        {
-          title: '系统设计',
-          description: '完成系统架构设计和数据库设计',
-          date: '2024-02-15',
-          status: 'current'
-        },
-        {
-          title: '核心功能开发',
-          description: '实现图像识别核心功能',
-          date: '2024-03-01',
-          status: 'pending'
-        },
-        {
-          title: '系统测试',
-          description: '完成系统测试和优化',
-          date: '2024-03-10',
-          status: 'pending'
-        },
-        {
-          title: '论文撰写',
-          description: '完成毕业论文撰写',
-          date: '2024-03-15',
-          status: 'pending'
-        }
-      ],
-      
-      documents: [
-        {
-          name: '需求分析文档.docx',
-          type: '需求文档',
-          size: '2.3MB',
-          uploadTime: '2024-01-20',
-          status: 'approved'
-        },
-        {
-          name: '系统设计文档.pdf',
-          type: '设计文档',
-          size: '5.1MB',
-          uploadTime: '2024-02-15',
-          status: 'pending'
-        },
-        {
-          name: '技术调研报告.docx',
-          type: '调研报告',
-          size: '3.2MB',
-          uploadTime: '2024-02-01',
-          status: 'approved'
-        }
-      ]
+      // 真实数据
+      myTopic: null,
+      milestones: [],
+      documents: []
     }
   },
+  async mounted() {
+    await this.loadMyTopicData()
+  },
   methods: {
+    // 加载我的选题数据
+    async loadMyTopicData() {
+      try {
+        this.loading = true
+        
+        // 获取当前用户ID
+        const userId = await getCurrentUserId()
+        if (!userId) {
+          this.$message.error('请先登录')
+          this.$router.push('/login')
+          return
+        }
+        
+        // 获取学生的选题信息
+        const selectionResponse = await selectionApi.getSelectionsByStudent(userId)
+        if (selectionResponse.code === 200 && selectionResponse.data && selectionResponse.data.length > 0) {
+          // 取第一个选题（假设学生只能选一个课题）
+          const selection = selectionResponse.data[0]
+          
+          // 根据topicId获取课题详情
+          try {
+            const topicResponse = await topicApi.getTopicById(selection.topicId)
+            if (topicResponse.code === 200 && topicResponse.data) {
+              // 合并选题信息和课题详情
+              this.myTopic = {
+                ...topicResponse.data,
+                // 选题相关信息
+                selectionId: selection.id,
+                selectedTime: selection.selectionTime,
+                status: selection.status,
+                progress: selection.progress || 0,
+                progressDescription: selection.progressDescription,
+                problems: selection.problems,
+                finalGrade: selection.finalGrade,
+                studentId: selection.studentId,
+                studentName: selection.studentName,
+                studentNumber: selection.studentNumber,
+                // 确保教师信息正确显示
+                teacherName: selection.teacherName || topicResponse.data.teacherName
+              }
+              
+              // 获取进度信息
+              await this.loadProgressData()
+              
+              // 获取文档信息
+              await this.loadDocumentsData()
+            } else {
+              this.$message.error('获取课题详情失败')
+              this.myTopic = null
+            }
+          } catch (error) {
+            console.error('获取课题详情失败:', error)
+            this.$message.error('获取课题详情失败')
+            this.myTopic = null
+          }
+        } else {
+          this.myTopic = null
+          this.milestones = []
+          this.documents = []
+        }
+      } catch (error) {
+        console.error('加载我的选题数据失败:', error)
+        
+        // 检查是否是权限问题
+        if (error.message && (error.message.includes('权限') || error.message.includes('登录'))) {
+          this.$message.error('登录已过期，请重新登录')
+          this.$router.push('/login')
+        } else {
+          this.$message.error('加载数据失败，请稍后重试')
+        }
+      } finally {
+        this.loading = false
+      }
+    },
+    
+    // 加载进度数据
+    async loadProgressData() {
+      if (!this.myTopic || !this.myTopic.selectionId) return
+      
+      try {
+        const response = await progressApi.getProgressBySelection(this.myTopic.selectionId)
+        if (response.code === 200) {
+          // 处理进度数据，过滤出里程碑记录
+          const progressData = response.data || []
+          this.milestones = progressData
+            .map(item => ({
+              id: item.id,
+              title: item.milestoneTitle || '进度更新', // 为没有标题的记录提供默认标题
+              description: item.milestoneDescription || item.description || '',
+              status: item.milestoneStatus || 'pending',
+              date: item.milestoneDate || item.createTime,
+              percentage: item.percentage
+            }))
+            .sort((a, b) => new Date(a.date) - new Date(b.date)) // 按时间排序
+        }
+      } catch (error) {
+        console.error('加载进度数据失败:', error)
+      }
+    },
+    
+    // 加载文档数据
+    async loadDocumentsData() {
+      if (!this.myTopic || !this.myTopic.selectionId) return
+      
+      try {
+        const response = await documentApi.getDocumentsBySelection(this.myTopic.selectionId)
+        if (response.code === 200) {
+          this.documents = response.data || []
+        }
+      } catch (error) {
+        console.error('加载文档数据失败:', error)
+      }
+    },
+    
     getDaysLeft() {
       if (!this.myTopic) return 0;
       const deadline = new Date(this.myTopic.deadline);
@@ -365,6 +445,39 @@ export default {
       return statusMap[status] || '未知';
     },
     
+    // 更新里程碑状态
+    async updateMilestoneStatus(milestone) {
+      try {
+        const updateData = {
+          id: milestone.id,
+          milestoneStatus: milestone.status
+        }
+        
+        const response = await progressApi.updateMilestoneStatus(updateData)
+        if (response.code === 200) {
+          this.$message.success('里程碑状态更新成功！')
+          // 重新加载进度数据
+          await this.loadProgressData()
+        } else {
+          this.$message.error(response.message || '状态更新失败')
+          // 恢复原状态
+          await this.loadProgressData()
+        }
+      } catch (error) {
+        console.error('更新里程碑状态失败:', error)
+        this.$message.error('状态更新失败，请稍后重试')
+        // 恢复原状态
+        await this.loadProgressData()
+      }
+    },
+    
+    // 格式化时间显示，去掉T字符
+    formatDateTime(dateTime) {
+      if (!dateTime) return ''
+      // 将 ISO 8601 格式转换为更友好的显示格式
+      return dateTime.replace('T', ' ').replace(/\.\d{3}Z?$/, '')
+    },
+    
     getDocumentStatusText(status) {
       const statusMap = {
         'approved': '已通过',
@@ -381,36 +494,109 @@ export default {
       this.progressDialogVisible = true;
     },
     
-    submitProgress() {
-      this.myTopic.progress = this.progressForm.percentage;
-      this.progressDialogVisible = false;
-      this.$message.success('进度更新成功！');
+    async submitProgress() {
+      try {
+        const progressData = {
+          selectionId: this.myTopic.selectionId,
+          milestoneTitle: this.progressForm.milestoneTitle,
+          milestoneStatus: this.progressForm.milestoneStatus,
+          percentage: this.progressForm.percentage,
+          description: this.progressForm.description,
+          problems: this.progressForm.problems
+        }
+        
+        const response = await progressApi.updateProgress(progressData)
+        if (response.code === 200) {
+          // 更新本地数据
+          this.myTopic.progress = this.progressForm.percentage
+          this.progressDialogVisible = false
+          this.$message.success('进度更新成功！')
+          
+          // 重新加载选题数据和进度数据
+          await this.loadMyTopicData()
+          await this.loadProgressData()
+        } else {
+          this.$message.error(response.message || '进度更新失败')
+        }
+      } catch (error) {
+        console.error('更新进度失败:', error)
+        this.$message.error('进度更新失败，请稍后重试')
+      }
     },
     
     uploadDocument() {
       this.$message.info('文档上传功能开发中...');
     },
     
-    downloadDocument(document) {
-      this.$message.info(`正在下载 ${document.name}`);
+    async downloadDocument(document) {
+      try {
+        const response = await documentApi.downloadDocument(document.id)
+        // 处理文件下载
+        const blob = new Blob([response])
+        const url = window.URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = document.name
+        link.click()
+        window.URL.revokeObjectURL(url)
+        this.$message.success('文档下载成功！')
+      } catch (error) {
+        console.error('下载文档失败:', error)
+        this.$message.error('下载文档失败，请稍后重试')
+      }
     },
     
-    deleteDocument(document) {
+    async deleteDocument(document) {
       this.$confirm('确定要删除这个文档吗？', '确认删除', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning'
-      }).then(() => {
-        const index = this.documents.indexOf(document);
+      }).then(async () => {
+        try {
+          const response = await documentApi.deleteDocument(document.id)
+          if (response.code === 200) {
+            // 从本地列表中移除
+            const index = this.documents.indexOf(document)
         if (index > -1) {
-          this.documents.splice(index, 1);
-          this.$message.success('文档删除成功！');
+              this.documents.splice(index, 1)
+            }
+            this.$message.success('文档删除成功！')
+          } else {
+            this.$message.error(response.message || '文档删除失败')
+          }
+        } catch (error) {
+          console.error('删除文档失败:', error)
+          this.$message.error('删除文档失败，请稍后重试')
         }
       });
     },
     
     goToTopics() {
       this.$router.push('/layout/student/topics');
+    },
+    
+    // 处理技术要求格式
+    getRequirementsArray(requirements) {
+      if (!requirements) return []
+      
+      // 如果是数组，直接返回
+      if (Array.isArray(requirements)) {
+        return requirements
+      }
+      
+      // 如果是字符串，按逗号或换行符分割
+      if (typeof requirements === 'string') {
+        // 处理可能的编码问题，去除特殊字符
+        let cleanString = requirements.replace(/[\u200B-\u200D\uFEFF]/g, '') // 去除零宽字符
+        cleanString = cleanString.replace(/\s+/g, ' ') // 将多个空格替换为单个空格
+        
+        return cleanString
+          .split(/[,，\n\r]/) // 按逗号、中文逗号、换行符分割
+          .map(req => req.trim()) // 去除前后空格
+          .filter(req => req.length > 0) // 过滤空字符串
+      }
+      
+      return []
     }
   }
 }
@@ -580,17 +766,41 @@ export default {
   font-size: 14px;
 }
 
-.milestone-content h4 {
+.milestone-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.milestone-header h4 {
   font-size: 16px;
   font-weight: 600;
   color: #2c3e50;
-  margin: 0 0 5px 0;
+  margin: 0;
+  flex: 1;
+}
+
+.milestone-actions {
+  margin-left: 10px;
 }
 
 .milestone-content p {
   color: #606266;
   margin: 0 0 8px 0;
   font-size: 14px;
+}
+
+.milestone-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.progress-text {
+  font-size: 12px;
+  color: #999;
 }
 
 .no-topic {

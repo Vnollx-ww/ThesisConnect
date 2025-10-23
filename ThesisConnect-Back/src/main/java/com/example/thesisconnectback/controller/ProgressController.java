@@ -38,11 +38,13 @@ public class ProgressController {
             Long userId = (Long) request.getAttribute("userId");
             String username = (String) request.getAttribute("username");
             Long selectionId = Long.valueOf(progressForm.get("selectionId").toString());
+            String milestoneTitle = (String) progressForm.get("milestoneTitle");
+            String milestoneStatus = (String) progressForm.get("milestoneStatus");
             Integer percentage = Integer.valueOf(progressForm.get("percentage").toString());
             String description = (String) progressForm.get("description");
             String problems = (String) progressForm.get("problems");
 
-            boolean success = progressService.updateProgress(selectionId, percentage, description, problems, userId, username);
+            boolean success = progressService.updateProgress(selectionId, milestoneTitle, milestoneStatus, percentage, description, problems, userId, username);
             if (success) {
                 return Result.success("进度更新成功");
             } else {
@@ -150,6 +152,33 @@ public class ProgressController {
         } catch (Exception e) {
             log.error("获取最新进度失败：", e);
             return Result.error("获取最新进度失败");
+        }
+    }
+
+    /**
+     * 更新里程碑状态
+     */
+    @PutMapping("/milestone/status")
+    public Result<Void> updateMilestoneStatus(@RequestBody Map<String, Object> updateData, HttpServletRequest request) {
+        try {
+            // 检查权限（只有学生可以更新里程碑状态）
+            String role = (String) request.getAttribute("role");
+            if (!"student".equals(role)) {
+                return Result.forbidden("只有学生可以更新里程碑状态");
+            }
+
+            Long milestoneId = Long.valueOf(updateData.get("id").toString());
+            String milestoneStatus = (String) updateData.get("milestoneStatus");
+
+            boolean success = progressService.updateMilestoneStatus(milestoneId, milestoneStatus);
+            if (success) {
+                return Result.success("里程碑状态更新成功");
+            } else {
+                return Result.error("里程碑状态更新失败");
+            }
+        } catch (Exception e) {
+            log.error("更新里程碑状态失败：", e);
+            return Result.error("更新里程碑状态失败：" + e.getMessage());
         }
     }
 

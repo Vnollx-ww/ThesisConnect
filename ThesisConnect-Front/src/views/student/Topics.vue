@@ -42,7 +42,7 @@
     <!-- 选题列表 -->
     <div class="topics-list">
       <el-row :gutter="20">
-        <el-col :span="8" v-for="topic in filteredTopics" :key="topic.id">
+        <el-col :span="8" v-for="topic in topics" :key="topic.id">
           <div class="topic-card">
             <div class="topic-header">
               <h3 class="topic-title">{{ topic.title }}</h3>
@@ -59,7 +59,7 @@
               <div class="topic-meta">
                 <div class="meta-item">
                   <i class="el-icon-user"></i>
-                  <span>{{ topic.teacher }}</span>
+                  <span>{{ topic.teacherName || topic.teacher }}</span>
                 </div>
                 <div class="meta-item">
                   <i class="el-icon-collection-tag"></i>
@@ -124,7 +124,7 @@
       <div v-if="selectedTopic" class="topic-detail">
         <h3>{{ selectedTopic.title }}</h3>
         <div class="detail-meta">
-          <p><strong>指导教师：</strong>{{ selectedTopic.teacher }}</p>
+          <p><strong>指导教师：</strong>{{ selectedTopic.teacherName || selectedTopic.teacher }}</p>
           <p><strong>专业要求：</strong>{{ selectedTopic.major }}</p>
           <p><strong>难度等级：</strong>{{ getDifficultyText(selectedTopic.difficulty) }}</p>
           <p><strong>截止时间：</strong>{{ selectedTopic.deadline }}</p>
@@ -136,7 +136,7 @@
           
           <h4>技术要求</h4>
           <ul>
-            <li v-for="requirement in selectedTopic.requirements" :key="requirement">
+            <li v-for="requirement in getRequirementsArray(selectedTopic.requirements)" :key="requirement">
               {{ requirement }}
             </li>
           </ul>
@@ -159,6 +159,9 @@
 </template>
 
 <script>
+import { topicApi } from '@/api'
+import { getCurrentUserId } from '@/utils/user'
+
 export default {
   name: 'StudentTopics',
   data() {
@@ -171,139 +174,71 @@ export default {
       totalTopics: 0,
       detailDialogVisible: false,
       selectedTopic: null,
+      loading: false,
       
-      // 模拟数据
-      topics: [
-        {
-          id: 1,
-          title: '基于深度学习的图像识别系统',
-          description: '设计并实现一个基于深度学习的图像识别系统，能够识别多种物体和场景。',
-          teacher: '李教授',
-          major: '计算机科学与技术',
-          difficulty: 'hard',
-          deadline: '2024-03-15',
-          selectedCount: 2,
-          maxStudents: 3,
-          viewCount: 156,
-          requirements: ['熟悉Python编程', '了解深度学习框架', '有图像处理基础'],
-          expectedOutcome: '完成一个可用的图像识别系统，并撰写相关技术文档。'
-        },
-        {
-          id: 2,
-          title: '校园二手交易平台设计与实现',
-          description: '开发一个校园内的二手物品交易平台，支持用户发布、搜索、交易等功能。',
-          teacher: '王老师',
-          major: '软件工程',
-          difficulty: 'medium',
-          deadline: '2024-03-20',
-          selectedCount: 1,
-          maxStudents: 2,
-          viewCount: 89,
-          requirements: ['熟悉Web开发', '了解数据库设计', '有前端开发经验'],
-          expectedOutcome: '完成一个功能完整的Web应用系统。'
-        },
-        {
-          id: 3,
-          title: '智能家居控制系统',
-          description: '设计一个智能家居控制系统，能够远程控制家中的各种设备。',
-          teacher: '张教授',
-          major: '网络工程',
-          difficulty: 'medium',
-          deadline: '2024-03-25',
-          selectedCount: 0,
-          maxStudents: 2,
-          viewCount: 67,
-          requirements: ['熟悉物联网技术', '了解嵌入式开发', '有硬件基础'],
-          expectedOutcome: '完成一个可演示的智能家居控制系统原型。'
-        },
-        {
-          id: 4,
-          title: '基于区块链的数据安全存储系统',
-          description: '利用区块链技术设计一个安全的数据存储系统，确保数据的完整性和不可篡改性。',
-          teacher: '刘老师',
-          major: '信息安全',
-          difficulty: 'hard',
-          deadline: '2024-03-30',
-          selectedCount: 1,
-          maxStudents: 2,
-          viewCount: 134,
-          requirements: ['了解区块链原理', '熟悉密码学', '有分布式系统基础'],
-          expectedOutcome: '完成一个基于区块链的数据存储系统原型。'
-        },
-        {
-          id: 5,
-          title: '学生成绩管理系统',
-          description: '开发一个学生成绩管理系统，支持成绩录入、查询、统计等功能。',
-          teacher: '陈老师',
-          major: '软件工程',
-          difficulty: 'easy',
-          deadline: '2024-04-01',
-          selectedCount: 3,
-          maxStudents: 4,
-          viewCount: 45,
-          requirements: ['熟悉数据库操作', '了解Web开发', '有系统设计能力'],
-          expectedOutcome: '完成一个功能完整的管理系统。'
-        },
-        {
-          id: 6,
-          title: '移动端健康管理应用',
-          description: '开发一个移动端健康管理应用，帮助用户记录和管理健康数据。',
-          teacher: '赵教授',
-          major: '计算机科学与技术',
-          difficulty: 'medium',
-          deadline: '2024-04-05',
-          selectedCount: 2,
-          maxStudents: 3,
-          viewCount: 78,
-          requirements: ['熟悉移动开发', '了解健康数据管理', '有UI设计能力'],
-          expectedOutcome: '完成一个可用的移动应用。'
-        }
-      ]
+      // 真实数据
+      topics: []
     }
+  },
+  async mounted() {
+    await this.loadTopics()
   },
   computed: {
-    filteredTopics() {
-      let filtered = this.topics;
-      
-      // 搜索过滤
-      if (this.searchKeyword) {
-        filtered = filtered.filter(topic => 
-          topic.title.toLowerCase().includes(this.searchKeyword.toLowerCase()) ||
-          topic.description.toLowerCase().includes(this.searchKeyword.toLowerCase())
-        );
-      }
-      
-      // 专业过滤
-      if (this.selectedMajor) {
-        const majorMap = {
-          'cs': '计算机科学与技术',
-          'se': '软件工程',
-          'ne': '网络工程',
-          'is': '信息安全'
-        };
-        filtered = filtered.filter(topic => topic.major === majorMap[this.selectedMajor]);
-      }
-      
-      // 难度过滤
-      if (this.selectedDifficulty) {
-        filtered = filtered.filter(topic => topic.difficulty === this.selectedDifficulty);
-      }
-      
-      this.totalTopics = filtered.length;
-      
-      // 分页
-      const start = (this.currentPage - 1) * this.pageSize;
-      const end = start + this.pageSize;
-      return filtered.slice(start, end);
-    }
+    // 筛选逻辑已移到后端处理，不再需要前端computed筛选
   },
   methods: {
+    // 加载课题列表
+    async loadTopics() {
+      try {
+        this.loading = true
+        const params = {
+          page: this.currentPage,
+          size: this.pageSize,
+          status: 'active'
+        }
+        
+        // 添加筛选参数
+        if (this.selectedMajor) {
+          const majorMap = {
+            'cs': '计算机科学与技术',
+            'se': '软件工程',
+            'ne': '网络工程',
+            'is': '信息安全'
+          };
+          params.major = majorMap[this.selectedMajor];
+        }
+        
+        if (this.selectedDifficulty) {
+          params.difficulty = this.selectedDifficulty;
+        }
+        
+        if (this.searchKeyword) {
+          params.keyword = this.searchKeyword;
+        }
+        
+        const response = await topicApi.getTopicList(params)
+        if (response.code === 200) {
+          this.topics = response.data.records || response.data || []
+          this.totalTopics = response.data.total || 0
+        } else {
+          this.$message.error(response.message || '获取课题列表失败')
+        }
+      } catch (error) {
+        console.error('加载课题列表失败:', error)
+        this.$message.error('加载课题列表失败，请稍后重试')
+      } finally {
+        this.loading = false
+      }
+    },
+    
     handleSearch() {
       this.currentPage = 1;
+      this.loadTopics();
     },
     
     handleFilter() {
       this.currentPage = 1;
+      this.loadTopics();
     },
     
     resetFilter() {
@@ -311,15 +246,18 @@ export default {
       this.selectedMajor = '';
       this.selectedDifficulty = '';
       this.currentPage = 1;
+      this.loadTopics();
     },
     
     handleSizeChange(val) {
       this.pageSize = val;
       this.currentPage = 1;
+      this.loadTopics()
     },
     
     handleCurrentChange(val) {
       this.currentPage = val;
+      this.loadTopics()
     },
     
     getDifficultyType(difficulty) {
@@ -345,17 +283,40 @@ export default {
       this.detailDialogVisible = true;
     },
     
-    selectTopic() {
+    async selectTopic() {
       if (this.selectedTopic) {
         this.$confirm('确定要选择这个课题吗？', '确认选择', {
           confirmButtonText: '确定',
           cancelButtonText: '取消',
           type: 'warning'
-        }).then(() => {
-          // 更新选题状态
-          this.selectedTopic.selectedCount++;
-          this.detailDialogVisible = false;
-          this.$message.success('选题成功！');
+        }).then(async () => {
+          try {
+            // 获取当前用户ID
+            const userId = await getCurrentUserId()
+            if (!userId) {
+              this.$message.error('请先登录')
+              return
+            }
+            
+            const selectionData = {
+              topicId: this.selectedTopic.id,
+              studentId: userId
+            }
+            
+            const response = await this.$api.selectionApi.selectTopic(selectionData)
+            if (response.code === 200) {
+              this.detailDialogVisible = false;
+              this.$message.success('选题成功！');
+              // 重新加载课题列表
+              await this.loadTopics()
+            } else {
+              this.$message.error(response.message || '选题失败')
+            }
+          } catch (error) {
+            console.error('选题失败:', error)
+            // 显示后端返回的具体错误信息
+            this.$message.error(error.message || '选题失败，请稍后重试')
+          }
         });
       }
     },
@@ -363,6 +324,30 @@ export default {
     handleClose(done) {
       this.selectedTopic = null;
       done();
+    },
+    
+    // 处理技术要求格式
+    getRequirementsArray(requirements) {
+      if (!requirements) return []
+      
+      // 如果是数组，直接返回
+      if (Array.isArray(requirements)) {
+        return requirements
+      }
+      
+      // 如果是字符串，按逗号或换行符分割
+      if (typeof requirements === 'string') {
+        // 处理可能的编码问题，去除特殊字符
+        let cleanString = requirements.replace(/[\u200B-\u200D\uFEFF]/g, '') // 去除零宽字符
+        cleanString = cleanString.replace(/\s+/g, ' ') // 将多个空格替换为单个空格
+        
+        return cleanString
+          .split(/[,，\n\r]/) // 按逗号、中文逗号、换行符分割
+          .map(req => req.trim()) // 去除前后空格
+          .filter(req => req.length > 0) // 过滤空字符串
+      }
+      
+      return []
     }
   }
 }

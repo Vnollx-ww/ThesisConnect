@@ -242,7 +242,7 @@
           <div class="content-section">
             <h4>技术要求</h4>
             <ul>
-              <li v-for="requirement in selectedTopic.requirements" :key="requirement">
+              <li v-for="requirement in getRequirementsArray(selectedTopic.requirements)" :key="requirement">
                 {{ requirement }}
               </li>
             </ul>
@@ -587,6 +587,30 @@ export default {
         'paused': '已暂停'
       };
       return textMap[status] || '未知';
+    },
+    
+    // 处理技术要求格式
+    getRequirementsArray(requirements) {
+      if (!requirements) return []
+      
+      // 如果是数组，直接返回
+      if (Array.isArray(requirements)) {
+        return requirements
+      }
+      
+      // 如果是字符串，按逗号或换行符分割
+      if (typeof requirements === 'string') {
+        // 处理可能的编码问题，去除特殊字符
+        let cleanString = requirements.replace(/[\u200B-\u200D\uFEFF]/g, '') // 去除零宽字符
+        cleanString = cleanString.replace(/\s+/g, ' ') // 将多个空格替换为单个空格
+        
+        return cleanString
+          .split(/[,，\n\r]/) // 按逗号、中文逗号、换行符分割
+          .map(req => req.trim()) // 去除前后空格
+          .filter(req => req.length > 0) // 过滤空字符串
+      }
+      
+      return []
     }
   }
 }
