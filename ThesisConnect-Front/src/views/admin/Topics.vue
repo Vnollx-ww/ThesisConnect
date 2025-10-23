@@ -22,33 +22,33 @@
         <el-col :span="6">
           <div class="stat-card">
             <div class="stat-icon">
-              <i class="el-icon-star-on"></i>
+              <i class="el-icon-check"></i>
             </div>
             <div class="stat-content">
-              <h3>{{ stats.selectedTopics }}</h3>
-              <p>已选课题</p>
+              <h3>{{ stats.activeTopics }}</h3>
+              <p>进行中课题</p>
             </div>
           </div>
         </el-col>
         <el-col :span="6">
           <div class="stat-card">
             <div class="stat-icon">
-              <i class="el-icon-user"></i>
+              <i class="el-icon-success"></i>
             </div>
             <div class="stat-content">
-              <h3>{{ stats.totalSelections }}</h3>
-              <p>选题总数</p>
+              <h3>{{ stats.completedTopics }}</h3>
+              <p>已完成课题</p>
             </div>
           </div>
         </el-col>
         <el-col :span="6">
           <div class="stat-card">
             <div class="stat-icon">
-              <i class="el-icon-data-line"></i>
+              <i class="el-icon-warning"></i>
             </div>
             <div class="stat-content">
-              <h3>{{ stats.avgRating }}</h3>
-              <p>平均评分</p>
+              <h3>{{ stats.pausedTopics }}</h3>
+              <p>已暂停课题</p>
             </div>
           </div>
         </el-col>
@@ -104,6 +104,10 @@
       <div class="section-header">
         <h3>课题列表</h3>
         <div class="header-actions">
+          <el-button type="primary" @click="addTopic">
+            <i class="el-icon-plus"></i>
+            添加课题
+          </el-button>
           <el-button @click="exportTopics">
             <i class="el-icon-download"></i>
             导出课题
@@ -119,6 +123,7 @@
         <el-table 
           :data="filteredTopics" 
           style="width: 100%"
+          v-loading="loading"
           @selection-change="handleSelectionChange">
           <el-table-column type="selection" width="55"></el-table-column>
           <el-table-column prop="title" label="课题名称" min-width="200">
@@ -128,7 +133,7 @@
               </el-button>
             </template>
           </el-table-column>
-          <el-table-column prop="teacher" label="指导教师" width="120"></el-table-column>
+          <el-table-column prop="teacherName" label="指导教师" width="120"></el-table-column>
           <el-table-column prop="major" label="专业要求" min-width="150"></el-table-column>
           <el-table-column prop="difficulty" label="难度" width="100">
             <template slot-scope="scope">
@@ -139,7 +144,7 @@
           </el-table-column>
           <el-table-column prop="selectedCount" label="已选人数" width="100">
             <template slot-scope="scope">
-              {{ scope.row.selectedCount }}/{{ scope.row.maxStudents }}
+              {{ scope.row.selectedCount || 0 }}/{{ scope.row.maxStudents }}
             </template>
           </el-table-column>
           <el-table-column prop="status" label="状态" width="100">
@@ -149,11 +154,19 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="deadline" label="截止时间" width="120"></el-table-column>
-          <el-table-column prop="viewCount" label="浏览量" width="80"></el-table-column>
+          <el-table-column prop="deadline" label="截止时间" width="120">
+            <template slot-scope="scope">
+              {{ scope.row.deadline ? scope.row.deadline.split('T')[0] : '-' }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="viewCount" label="浏览量" width="80">
+            <template slot-scope="scope">
+              {{ scope.row.viewCount || 0 }}
+            </template>
+          </el-table-column>
           <el-table-column prop="rating" label="评分" width="100">
             <template slot-scope="scope">
-              <el-rate v-model="scope.row.rating" disabled show-score></el-rate>
+              <el-rate :value="scope.row.rating || 0" disabled show-score></el-rate>
             </template>
           </el-table-column>
           <el-table-column label="操作" width="200" fixed="right">
@@ -208,7 +221,7 @@
               <el-col :span="12">
                 <div class="info-item">
                   <label>指导教师：</label>
-                  <span>{{ selectedTopic.teacher }}</span>
+                  <span>{{ selectedTopic.teacherName }}</span>
                 </div>
               </el-col>
               <el-col :span="12">
@@ -228,7 +241,7 @@
               <el-col :span="12">
                 <div class="info-item">
                   <label>截止时间：</label>
-                  <span>{{ selectedTopic.deadline }}</span>
+                  <span>{{ selectedTopic.deadline ? selectedTopic.deadline.split('T')[0] : '-' }}</span>
                 </div>
               </el-col>
             </el-row>
@@ -264,6 +277,59 @@
           </div>
         </div>
       </div>
+    </el-dialog>
+    
+    <!-- 添加课题对话框 -->
+    <el-dialog
+      title="添加课题"
+      :visible.sync="addDialogVisible"
+      width="600px">
+      <el-form :model="addForm" :rules="addRules" ref="addForm" label-width="100px">
+        <el-form-item label="课题名称" prop="title">
+          <el-input v-model="addForm.title" placeholder="请输入课题名称"></el-input>
+        </el-form-item>
+        <el-form-item label="课题描述" prop="description">
+          <el-input v-model="addForm.description" type="textarea" :rows="3" placeholder="请输入课题描述"></el-input>
+        </el-form-item>
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="专业要求" prop="major">
+              <el-input v-model="addForm.major" placeholder="请输入专业要求"></el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="难度等级" prop="difficulty">
+              <el-select v-model="addForm.difficulty" placeholder="请选择难度等级">
+                <el-option label="简单" value="easy"></el-option>
+                <el-option label="中等" value="medium"></el-option>
+                <el-option label="困难" value="hard"></el-option>
+              </el-select>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="最大人数" prop="maxStudents">
+              <el-input-number v-model="addForm.maxStudents" :min="1" :max="10"></el-input-number>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="截止时间">
+              <el-date-picker v-model="addForm.deadline" type="date" placeholder="选择截止时间"></el-date-picker>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-form-item label="技术要求">
+          <el-input v-model="addForm.requirements" type="textarea" :rows="2" placeholder="请输入技术要求"></el-input>
+        </el-form-item>
+        <el-form-item label="预期成果">
+          <el-input v-model="addForm.expectedOutcome" type="textarea" :rows="2" placeholder="请输入预期成果"></el-input>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="addDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitAdd">确定</el-button>
+      </span>
     </el-dialog>
     
     <!-- 编辑课题对话框 -->
@@ -312,6 +378,13 @@
         <el-form-item label="预期成果">
           <el-input v-model="editForm.expectedOutcome" type="textarea" :rows="2"></el-input>
         </el-form-item>
+        <el-form-item label="状态">
+          <el-select v-model="editForm.status">
+            <el-option label="进行中" value="active"></el-option>
+            <el-option label="已完成" value="completed"></el-option>
+            <el-option label="已暂停" value="paused"></el-option>
+          </el-select>
+        </el-form-item>
       </el-form>
       <span slot="footer" class="dialog-footer">
         <el-button @click="editDialogVisible = false">取消</el-button>
@@ -322,6 +395,8 @@
 </template>
 
 <script>
+import { topicApi, userApi } from '@/api/index'
+
 export default {
   name: 'AdminTopics',
   data() {
@@ -335,10 +410,25 @@ export default {
       totalTopics: 0,
       detailDialogVisible: false,
       editDialogVisible: false,
+      addDialogVisible: false,
       selectedTopic: null,
       selectedTopics: [],
+      loading: false,
       
       editForm: {
+        id: null,
+        title: '',
+        description: '',
+        major: '',
+        difficulty: '',
+        maxStudents: 2,
+        deadline: '',
+        requirements: '',
+        expectedOutcome: '',
+        status: 'active'
+      },
+      
+      addForm: {
         title: '',
         description: '',
         major: '',
@@ -349,125 +439,105 @@ export default {
         expectedOutcome: ''
       },
       
-      stats: {
-        totalTopics: 89,
-        selectedTopics: 67,
-        totalSelections: 134,
-        avgRating: 4.2
+      addRules: {
+        title: [
+          { required: true, message: '请输入课题标题', trigger: 'blur' }
+        ],
+        description: [
+          { required: true, message: '请输入课题描述', trigger: 'blur' }
+        ],
+        major: [
+          { required: true, message: '请输入专业要求', trigger: 'blur' }
+        ],
+        difficulty: [
+          { required: true, message: '请选择难度等级', trigger: 'change' }
+        ],
+        maxStudents: [
+          { required: true, message: '请输入最大学生数', trigger: 'blur' }
+        ]
       },
       
-      teachers: [
-        { id: 1, name: '李教授' },
-        { id: 2, name: '王老师' },
-        { id: 3, name: '张教授' },
-        { id: 4, name: '刘老师' }
-      ],
+      stats: {
+        totalTopics: 0,
+        activeTopics: 0,
+        completedTopics: 0,
+        pausedTopics: 0
+      },
       
-      topics: [
-        {
-          id: 1,
-          title: '基于深度学习的图像识别系统',
-          description: '设计并实现一个基于深度学习的图像识别系统，能够识别多种物体和场景。',
-          teacher: '李教授',
-          major: '计算机科学与技术',
-          difficulty: 'hard',
-          maxStudents: 3,
-          selectedCount: 2,
-          status: 'active',
-          deadline: '2024-03-15',
-          viewCount: 156,
-          rating: 4.5,
-          requirements: ['熟悉Python编程', '了解深度学习框架', '有图像处理基础'],
-          expectedOutcome: '完成一个可用的图像识别系统，并撰写相关技术文档。',
-          students: [
-            { name: '张三', studentId: '2021001001', phone: '13800138000', email: 'zhangsan@example.com', progress: 35 },
-            { name: '李四', studentId: '2021001002', phone: '13800138001', email: 'lisi@example.com', progress: 20 }
-          ]
-        },
-        {
-          id: 2,
-          title: '校园二手交易平台设计与实现',
-          description: '开发一个校园内的二手物品交易平台，支持用户发布、搜索、交易等功能。',
-          teacher: '王老师',
-          major: '软件工程',
-          difficulty: 'medium',
-          maxStudents: 2,
-          selectedCount: 1,
-          status: 'active',
-          deadline: '2024-03-20',
-          viewCount: 89,
-          rating: 4.2,
-          requirements: ['熟悉Web开发', '了解数据库设计', '有前端开发经验'],
-          expectedOutcome: '完成一个功能完整的Web应用系统。',
-          students: [
-            { name: '王五', studentId: '2021001003', phone: '13800138002', email: 'wangwu@example.com', progress: 15 }
-          ]
-        },
-        {
-          id: 3,
-          title: '智能家居控制系统',
-          description: '设计一个智能家居控制系统，能够远程控制家中的各种设备。',
-          teacher: '张教授',
-          major: '网络工程',
-          difficulty: 'medium',
-          maxStudents: 2,
-          selectedCount: 0,
-          status: 'active',
-          deadline: '2024-03-25',
-          viewCount: 67,
-          rating: 0,
-          requirements: ['熟悉物联网技术', '了解嵌入式开发', '有硬件基础'],
-          expectedOutcome: '完成一个可演示的智能家居控制系统原型。',
-          students: []
-        }
-      ]
+      teachers: [],
+      topics: []
     }
   },
   computed: {
     filteredTopics() {
-      let filtered = this.topics;
-      
-      // 搜索过滤
-      if (this.searchKeyword) {
-        filtered = filtered.filter(topic => 
-          topic.title.toLowerCase().includes(this.searchKeyword.toLowerCase()) ||
-          topic.description.toLowerCase().includes(this.searchKeyword.toLowerCase())
-        );
-      }
-      
-      // 难度过滤
-      if (this.difficultyFilter) {
-        filtered = filtered.filter(topic => topic.difficulty === this.difficultyFilter);
-      }
-      
-      // 状态过滤
-      if (this.statusFilter) {
-        filtered = filtered.filter(topic => topic.status === this.statusFilter);
-      }
-      
-      // 教师过滤
-      if (this.teacherFilter) {
-        const teacher = this.teachers.find(t => t.id === this.teacherFilter);
-        if (teacher) {
-          filtered = filtered.filter(topic => topic.teacher === teacher.name);
-        }
-      }
-      
-      this.totalTopics = filtered.length;
-      
-      // 分页
-      const start = (this.currentPage - 1) * this.pageSize;
-      const end = start + this.pageSize;
-      return filtered.slice(start, end);
+      return this.topics;
     }
   },
+  mounted() {
+    this.loadTopicStats();
+    this.loadTeachers();
+    this.loadTopics();
+  },
   methods: {
+    // 加载课题统计信息
+    async loadTopicStats() {
+      try {
+        const response = await topicApi.getTopicStats();
+        if (response.code === 200) {
+          this.stats = response.data;
+        }
+      } catch (error) {
+        console.error('加载课题统计失败:', error);
+        this.$message.error('加载课题统计失败');
+      }
+    },
+
+    // 加载教师列表
+    async loadTeachers() {
+      try {
+        const response = await userApi.getUserList({ role: 'teacher', size: 1000 });
+        if (response.code === 200) {
+          this.teachers = response.data.records;
+        }
+      } catch (error) {
+        console.error('加载教师列表失败:', error);
+      }
+    },
+
+    // 加载课题列表
+    async loadTopics() {
+      this.loading = true;
+      try {
+        const params = {
+          page: this.currentPage,
+          size: this.pageSize,
+          major: this.difficultyFilter || undefined,
+          difficulty: this.difficultyFilter || undefined,
+          status: this.statusFilter || undefined,
+          keyword: this.searchKeyword || undefined
+        };
+        
+        const response = await topicApi.getTopicList(params);
+        if (response.code === 200) {
+          this.topics = response.data.records;
+          this.totalTopics = response.data.total;
+        }
+      } catch (error) {
+        console.error('加载课题列表失败:', error);
+        this.$message.error('加载课题列表失败');
+      } finally {
+        this.loading = false;
+      }
+    },
+
     handleSearch() {
       this.currentPage = 1;
+      this.loadTopics();
     },
     
     handleFilter() {
       this.currentPage = 1;
+      this.loadTopics();
     },
     
     resetFilter() {
@@ -476,15 +546,18 @@ export default {
       this.statusFilter = '';
       this.teacherFilter = '';
       this.currentPage = 1;
+      this.loadTopics();
     },
     
     handleSizeChange(val) {
       this.pageSize = val;
       this.currentPage = 1;
+      this.loadTopics();
     },
     
     handleCurrentChange(val) {
       this.currentPage = val;
+      this.loadTopics();
     },
     
     handleSelectionChange(selection) {
@@ -497,56 +570,149 @@ export default {
     },
     
     editTopic(topic) {
-      this.editForm = { ...topic };
+      this.editForm = { 
+        id: topic.id,
+        title: topic.title,
+        description: topic.description,
+        major: topic.major,
+        difficulty: topic.difficulty,
+        maxStudents: topic.maxStudents,
+        deadline: topic.deadline,
+        requirements: topic.requirements,
+        expectedOutcome: topic.expectedOutcome,
+        status: topic.status
+      };
       this.editDialogVisible = true;
     },
     
-    submitEdit() {
-      const index = this.topics.findIndex(topic => topic.id === this.editForm.id);
-      if (index > -1) {
-        this.topics.splice(index, 1, this.editForm);
+    addTopic() {
+      this.addForm = {
+        title: '',
+        description: '',
+        major: '',
+        difficulty: '',
+        maxStudents: 2,
+        deadline: '',
+        requirements: '',
+        expectedOutcome: ''
+      };
+      this.addDialogVisible = true;
+    },
+    
+    async submitEdit() {
+      try {
+        const response = await topicApi.updateTopic(this.editForm.id, this.editForm);
+        if (response.code === 200) {
         this.$message.success('课题信息更新成功！');
-      }
       this.editDialogVisible = false;
+          this.loadTopics();
+        } else {
+          this.$message.error(response.message || '课题信息更新失败');
+        }
+      } catch (error) {
+        console.error('更新课题信息失败:', error);
+        this.$message.error('更新失败，请重试');
+      }
+    },
+    
+    async submitAdd() {
+      this.$refs.addForm.validate(async (valid) => {
+        if (valid) {
+          try {
+            const response = await topicApi.createTopic(this.addForm);
+            if (response.code === 200) {
+              this.$message.success('课题添加成功！');
+              this.addDialogVisible = false;
+              this.loadTopics();
+              this.loadTopicStats();
+            } else {
+              this.$message.error(response.message || '课题添加失败');
+            }
+          } catch (error) {
+            console.error('添加课题失败:', error);
+            this.$message.error('添加失败，请重试');
+          }
+        }
+      });
     },
     
     viewStudents(topic) {
       this.$message.info(`查看课题"${topic.title}"的学生列表`);
     },
     
-    toggleTopicStatus(topic) {
+    async toggleTopicStatus(topic) {
       const action = topic.status === 'active' ? '暂停' : '启用';
       this.$confirm(`确定要${action}该课题吗？`, `确认${action}`, {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning'
-      }).then(() => {
-        topic.status = topic.status === 'active' ? 'paused' : 'active';
+      }).then(async () => {
+        try {
+          const updateData = {
+            ...topic,
+            status: topic.status === 'active' ? 'paused' : 'active'
+          };
+          const response = await topicApi.updateTopic(topic.id, updateData);
+          if (response.code === 200) {
         this.$message.success(`课题"${topic.title}"已${action}`);
-      });
-    },
-    
-    deleteTopic(topic) {
-      this.$confirm('确定要删除这个课题吗？', '确认删除', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }).then(() => {
-        const index = this.topics.indexOf(topic);
-        if (index > -1) {
-          this.topics.splice(index, 1);
-          this.stats.totalTopics--;
-          this.$message.success('课题删除成功！');
+            this.loadTopics();
+            this.loadTopicStats();
+          } else {
+            this.$message.error(response.message || '状态修改失败');
+          }
+        } catch (error) {
+          console.error('修改课题状态失败:', error);
+          this.$message.error('状态修改失败');
         }
       });
     },
     
-    batchOperation() {
+    async deleteTopic(topic) {
+      this.$confirm('确定要删除这个课题吗？', '确认删除', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(async () => {
+        try {
+          const response = await topicApi.deleteTopic(topic.id);
+          if (response.code === 200) {
+          this.$message.success('课题删除成功！');
+            this.loadTopics();
+            this.loadTopicStats();
+          } else {
+            this.$message.error(response.message || '课题删除失败');
+          }
+        } catch (error) {
+          console.error('删除课题失败:', error);
+          this.$message.error('删除失败');
+        }
+      });
+    },
+    
+    async batchOperation() {
       if (this.selectedTopics.length === 0) {
         this.$message.warning('请先选择要操作的课题');
         return;
       }
-      this.$message.info('批量操作功能开发中...');
+      
+      this.$confirm(`确定要删除选中的 ${this.selectedTopics.length} 个课题吗？`, '确认删除', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(async () => {
+        try {
+          const deletePromises = this.selectedTopics.map(topic => 
+            topicApi.deleteTopic(topic.id)
+          );
+          await Promise.all(deletePromises);
+          this.$message.success('批量删除课题成功');
+          this.loadTopics();
+          this.loadTopicStats();
+        } catch (error) {
+          console.error('批量删除课题失败:', error);
+          this.$message.error('批量删除失败');
+        }
+      });
     },
     
     exportTopics() {

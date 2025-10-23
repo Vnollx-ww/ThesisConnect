@@ -81,9 +81,8 @@
         <el-col :span="4">
           <el-select v-model="statusFilter" placeholder="状态筛选" @change="handleFilter">
             <el-option label="全部状态" value=""></el-option>
-            <el-option label="正常" value="active"></el-option>
-            <el-option label="禁用" value="disabled"></el-option>
-            <el-option label="待审核" value="pending"></el-option>
+            <el-option label="正常" value="1"></el-option>
+            <el-option label="禁用" value="0"></el-option>
           </el-select>
         </el-col>
         <el-col :span="4">
@@ -118,6 +117,7 @@
         <el-table 
           :data="filteredUsers" 
           style="width: 100%"
+          v-loading="loading"
           @selection-change="handleSelectionChange">
           <el-table-column type="selection" width="55"></el-table-column>
           <el-table-column prop="avatar" label="头像" width="80">
@@ -127,8 +127,9 @@
               </el-avatar>
             </template>
           </el-table-column>
-          <el-table-column prop="name" label="姓名" width="100"></el-table-column>
-          <el-table-column prop="userId" label="用户ID" width="120"></el-table-column>
+          <el-table-column prop="realName" label="姓名" width="100"></el-table-column>
+          <el-table-column prop="username" label="用户名" width="120"></el-table-column>
+          <el-table-column prop="studentId" label="学号/工号" width="120"></el-table-column>
           <el-table-column prop="role" label="角色" width="100">
             <template slot-scope="scope">
               <el-tag :type="getRoleType(scope.row.role)" size="small">
@@ -146,15 +147,23 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="lastLogin" label="最后登录" width="120"></el-table-column>
-          <el-table-column prop="createTime" label="注册时间" width="120"></el-table-column>
+          <el-table-column prop="lastLoginTime" label="最后登录" width="120">
+            <template slot-scope="scope">
+              {{ scope.row.lastLoginTime ? scope.row.lastLoginTime.split('T')[0] : '-' }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="createTime" label="注册时间" width="120">
+            <template slot-scope="scope">
+              {{ scope.row.createTime ? scope.row.createTime.split('T')[0] : '-' }}
+            </template>
+          </el-table-column>
           <el-table-column label="操作" width="200" fixed="right">
             <template slot-scope="scope">
               <el-button type="text" size="small" @click="viewUserDetail(scope.row)">详情</el-button>
               <el-button type="text" size="small" @click="editUser(scope.row)">编辑</el-button>
               <el-button type="text" size="small" @click="resetPassword(scope.row)">重置密码</el-button>
               <el-button type="text" size="small" @click="toggleUserStatus(scope.row)">
-                {{ scope.row.status === 'active' ? '禁用' : '启用' }}
+                {{ scope.row.status === 1 ? '禁用' : '启用' }}
               </el-button>
             </template>
           </el-table-column>
@@ -184,13 +193,26 @@
       <el-form :model="userForm" :rules="userRules" ref="userForm" label-width="100px">
         <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="姓名" prop="name">
-              <el-input v-model="userForm.name" placeholder="请输入姓名"></el-input>
+            <el-form-item label="用户名" prop="username">
+              <el-input v-model="userForm.username" placeholder="请输入用户名"></el-input>
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="用户ID" prop="userId">
-              <el-input v-model="userForm.userId" placeholder="请输入用户ID"></el-input>
+            <el-form-item label="真实姓名" prop="realName">
+              <el-input v-model="userForm.realName" placeholder="请输入真实姓名"></el-input>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="学号/工号" prop="studentId">
+              <el-input v-model="userForm.studentId" placeholder="请输入学号或工号"></el-input>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="部门/专业" prop="department">
+              <el-input v-model="userForm.department" placeholder="请输入部门或专业"></el-input>
             </el-form-item>
           </el-col>
         </el-row>
@@ -208,9 +230,8 @@
           <el-col :span="12">
             <el-form-item label="状态" prop="status">
               <el-select v-model="userForm.status" placeholder="选择状态">
-                <el-option label="正常" value="active"></el-option>
-                <el-option label="禁用" value="disabled"></el-option>
-                <el-option label="待审核" value="pending"></el-option>
+                <el-option label="正常" :value="1"></el-option>
+                <el-option label="禁用" :value="0"></el-option>
               </el-select>
             </el-form-item>
           </el-col>
@@ -229,9 +250,6 @@
           </el-col>
         </el-row>
         
-        <el-form-item label="部门/专业" prop="department">
-          <el-input v-model="userForm.department" placeholder="请输入部门或专业"></el-input>
-        </el-form-item>
         
         <el-form-item label="密码" prop="password" v-if="dialogTitle === '添加用户'">
           <el-input v-model="userForm.password" type="password" placeholder="请输入密码"></el-input>
@@ -255,8 +273,9 @@
               <i class="el-icon-user-solid"></i>
             </el-avatar>
             <div class="user-info">
-              <h3>{{ selectedUser.name }}</h3>
-              <p>ID：{{ selectedUser.userId }}</p>
+              <h3>{{ selectedUser.realName }}</h3>
+              <p>用户名：{{ selectedUser.username }}</p>
+              <p>学号/工号：{{ selectedUser.studentId }}</p>
               <p>角色：{{ getRoleText(selectedUser.role) }}</p>
             </div>
           </div>
@@ -302,13 +321,13 @@
                 <el-col :span="12">
                   <div class="info-item">
                     <label>最后登录：</label>
-                    <span>{{ selectedUser.lastLogin }}</span>
+                    <span>{{ selectedUser.lastLoginTime ? selectedUser.lastLoginTime.split('T')[0] : '-' }}</span>
                   </div>
                 </el-col>
                 <el-col :span="12">
                   <div class="info-item">
                     <label>登录次数：</label>
-                    <span>{{ selectedUser.loginCount }}</span>
+                    <span>{{ selectedUser.loginCount || 0 }}</span>
                   </div>
                 </el-col>
               </el-row>
@@ -337,6 +356,8 @@
 </template>
 
 <script>
+import { userApi } from '@/api/index'
+
 export default {
   name: 'AdminUsers',
   data() {
@@ -353,24 +374,26 @@ export default {
       selectedUser: null,
       activeTab: 'basic',
       selectedUsers: [],
+      loading: false,
       
       userForm: {
-        name: '',
-        userId: '',
+        username: '',
+        realName: '',
         role: '',
-        status: 'active',
+        status: 1,
         email: '',
         phone: '',
         department: '',
+        studentId: '',
         password: ''
       },
       
       userRules: {
-        name: [
-          { required: true, message: '请输入姓名', trigger: 'blur' }
+        username: [
+          { required: true, message: '请输入用户名', trigger: 'blur' }
         ],
-        userId: [
-          { required: true, message: '请输入用户ID', trigger: 'blur' }
+        realName: [
+          { required: true, message: '请输入真实姓名', trigger: 'blur' }
         ],
         role: [
           { required: true, message: '请选择角色', trigger: 'change' }
@@ -389,109 +412,71 @@ export default {
       },
       
       stats: {
-        totalUsers: 1256,
-        students: 1100,
-        teachers: 150,
-        admins: 6
+        totalUsers: 0,
+        students: 0,
+        teachers: 0,
+        admins: 0
       },
       
-      users: [
-        {
-          id: 1,
-          name: '张三',
-          userId: '2021001001',
-          role: 'student',
-          department: '计算机科学与技术',
-          email: 'zhangsan@example.com',
-          phone: '13800138000',
-          status: 'active',
-          lastLogin: '2024-02-15',
-          createTime: '2024-01-15',
-          loginCount: 45,
-          avatar: '',
-          activities: [
-            { title: '登录系统', description: '用户登录系统', time: '2024-02-15 14:30' },
-            { title: '选择课题', description: '选择了课题"基于深度学习的图像识别系统"', time: '2024-02-15 13:45' },
-            { title: '上传文档', description: '上传了需求分析文档', time: '2024-02-15 12:20' }
-          ]
-        },
-        {
-          id: 2,
-          name: '李教授',
-          userId: 'T2021001',
-          role: 'teacher',
-          department: '计算机科学与技术学院',
-          email: 'li.professor@university.edu.cn',
-          phone: '13800138001',
-          status: 'active',
-          lastLogin: '2024-02-15',
-          createTime: '2024-01-10',
-          loginCount: 78,
-          avatar: '',
-          activities: [
-            { title: '登录系统', description: '用户登录系统', time: '2024-02-15 14:30' },
-            { title: '发布课题', description: '发布了新课题"基于深度学习的图像识别系统"', time: '2024-02-15 13:45' },
-            { title: '审核文档', description: '审核了学生提交的文档', time: '2024-02-15 12:20' }
-          ]
-        },
-        {
-          id: 3,
-          name: '王五',
-          userId: '2021001003',
-          role: 'student',
-          department: '软件工程',
-          email: 'wangwu@example.com',
-          phone: '13800138002',
-          status: 'pending',
-          lastLogin: '2024-02-14',
-          createTime: '2024-02-14',
-          loginCount: 3,
-          avatar: '',
-          activities: [
-            { title: '注册账户', description: '用户注册了账户', time: '2024-02-14 16:30' },
-            { title: '登录系统', description: '用户登录系统', time: '2024-02-14 16:35' }
-          ]
-        }
-      ]
+      users: []
     }
   },
   computed: {
     filteredUsers() {
-      let filtered = this.users;
-      
-      // 搜索过滤
-      if (this.searchKeyword) {
-        filtered = filtered.filter(user => 
-          user.name.toLowerCase().includes(this.searchKeyword.toLowerCase()) ||
-          user.userId.toLowerCase().includes(this.searchKeyword.toLowerCase())
-        );
-      }
-      
-      // 角色过滤
-      if (this.roleFilter) {
-        filtered = filtered.filter(user => user.role === this.roleFilter);
-      }
-      
-      // 状态过滤
-      if (this.statusFilter) {
-        filtered = filtered.filter(user => user.status === this.statusFilter);
-      }
-      
-      this.totalUsers = filtered.length;
-      
-      // 分页
-      const start = (this.currentPage - 1) * this.pageSize;
-      const end = start + this.pageSize;
-      return filtered.slice(start, end);
+      return this.users;
     }
   },
+  mounted() {
+    this.loadUserStats();
+    this.loadUsers();
+  },
   methods: {
+    // 加载用户统计信息
+    async loadUserStats() {
+      try {
+        const response = await userApi.getUserStats();
+        if (response.code === 200) {
+          this.stats = response.data;
+        }
+      } catch (error) {
+        console.error('加载用户统计失败:', error);
+        this.$message.error('加载用户统计失败');
+      }
+    },
+
+    // 加载用户列表
+    async loadUsers() {
+      this.loading = true;
+      try {
+        const params = {
+          page: this.currentPage,
+          size: this.pageSize,
+          role: this.roleFilter || undefined,
+          status: this.statusFilter || undefined,
+          keyword: this.searchKeyword || undefined
+        };
+        
+        const response = await userApi.getUserList(params);
+        if (response.code === 200) {
+          this.users = response.data.records;
+          this.totalUsers = response.data.total;
+        }
+      } catch (error) {
+        console.error('加载用户列表失败:', error);
+        this.$message.error('加载用户列表失败');
+      } finally {
+        this.loading = false;
+      }
+    },
+
     handleSearch() {
       this.currentPage = 1;
+      this.loadUsers();
     },
     
     handleFilter() {
       this.currentPage = 1;
+      this.loadUsers();
     },
     
     resetFilter() {
@@ -499,15 +484,18 @@ export default {
       this.roleFilter = '';
       this.statusFilter = '';
       this.currentPage = 1;
+      this.loadUsers();
     },
     
     handleSizeChange(val) {
       this.pageSize = val;
       this.currentPage = 1;
+      this.loadUsers();
     },
     
     handleCurrentChange(val) {
       this.currentPage = val;
+      this.loadUsers();
     },
     
     handleSelectionChange(selection) {
@@ -517,13 +505,14 @@ export default {
     addUser() {
       this.dialogTitle = '添加用户';
       this.userForm = {
-        name: '',
-        userId: '',
+        username: '',
+        realName: '',
         role: '',
-        status: 'active',
+        status: 1,
         email: '',
         phone: '',
         department: '',
+        studentId: '',
         password: ''
       };
       this.userDialogVisible = true;
@@ -531,36 +520,51 @@ export default {
     
     editUser(user) {
       this.dialogTitle = '编辑用户';
-      this.userForm = { ...user };
+      this.userForm = { 
+        id: user.id,
+        username: user.username,
+        realName: user.realName,
+        role: user.role,
+        status: user.status,
+        email: user.email,
+        phone: user.phone,
+        department: user.department,
+        studentId: user.studentId,
+        password: ''
+      };
       this.userDialogVisible = true;
     },
     
-    submitUser() {
-      this.$refs.userForm.validate((valid) => {
+    async submitUser() {
+      this.$refs.userForm.validate(async (valid) => {
         if (valid) {
+          try {
           if (this.dialogTitle === '添加用户') {
             // 添加新用户
-            const newUser = {
-              ...this.userForm,
-              id: Date.now(),
-              lastLogin: '-',
-              createTime: new Date().toISOString().split('T')[0],
-              loginCount: 0,
-              avatar: '',
-              activities: []
-            };
-            this.users.unshift(newUser);
-            this.stats.totalUsers++;
+              const response = await userApi.createUser(this.userForm);
+              if (response.code === 200) {
             this.$message.success('用户添加成功！');
+                this.userDialogVisible = false;
+                this.loadUsers();
+                this.loadUserStats();
+              } else {
+                this.$message.error(response.message || '用户添加失败');
+              }
           } else {
             // 编辑用户
-            const index = this.users.findIndex(user => user.id === this.userForm.id);
-            if (index > -1) {
-              this.users.splice(index, 1, this.userForm);
+              const response = await userApi.updateUser(this.userForm.id, this.userForm);
+              if (response.code === 200) {
               this.$message.success('用户信息更新成功！');
+                this.userDialogVisible = false;
+                this.loadUsers();
+              } else {
+                this.$message.error(response.message || '用户信息更新失败');
             }
           }
-          this.userDialogVisible = false;
+          } catch (error) {
+            console.error('提交用户信息失败:', error);
+            this.$message.error('操作失败，请重试');
+          }
         }
       });
     },
@@ -570,34 +574,75 @@ export default {
       this.detailDialogVisible = true;
     },
     
-    resetPassword(user) {
+    async resetPassword(user) {
       this.$confirm('确定要重置该用户的密码吗？', '确认重置', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning'
-      }).then(() => {
-        this.$message.success(`用户 ${user.name} 的密码已重置为默认密码`);
+      }).then(async () => {
+        try {
+          const response = await userApi.resetPassword(user.id, { newPassword: '123456' });
+          if (response.code === 200) {
+            this.$message.success(`用户 ${user.realName} 的密码已重置为默认密码 123456`);
+          } else {
+            this.$message.error(response.message || '密码重置失败');
+          }
+        } catch (error) {
+          console.error('重置密码失败:', error);
+          this.$message.error('密码重置失败');
+        }
       });
     },
     
-    toggleUserStatus(user) {
-      const action = user.status === 'active' ? '禁用' : '启用';
+    async toggleUserStatus(user) {
+      const action = user.status === 1 ? '禁用' : '启用';
       this.$confirm(`确定要${action}该用户吗？`, `确认${action}`, {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning'
-      }).then(() => {
-        user.status = user.status === 'active' ? 'disabled' : 'active';
-        this.$message.success(`用户 ${user.name} 已${action}`);
+      }).then(async () => {
+        try {
+          const response = await userApi.toggleUserStatus(user.id);
+          if (response.code === 200) {
+            this.$message.success(`用户 ${user.realName} 已${action}`);
+            this.loadUsers();
+            this.loadUserStats();
+          } else {
+            this.$message.error(response.message || '状态修改失败');
+          }
+        } catch (error) {
+          console.error('修改用户状态失败:', error);
+          this.$message.error('状态修改失败');
+        }
       });
     },
     
-    batchOperation() {
+    async batchOperation() {
       if (this.selectedUsers.length === 0) {
         this.$message.warning('请先选择要操作的用户');
         return;
       }
-      this.$message.info('批量操作功能开发中...');
+      
+      this.$confirm(`确定要删除选中的 ${this.selectedUsers.length} 个用户吗？`, '确认删除', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(async () => {
+        try {
+          const userIds = this.selectedUsers.map(user => user.id);
+          const response = await userApi.batchDeleteUsers(userIds);
+          if (response.code === 200) {
+            this.$message.success('批量删除用户成功');
+            this.loadUsers();
+            this.loadUserStats();
+          } else {
+            this.$message.error(response.message || '批量删除失败');
+          }
+        } catch (error) {
+          console.error('批量删除用户失败:', error);
+          this.$message.error('批量删除失败');
+        }
+      });
     },
     
     exportUsers() {
@@ -628,18 +673,16 @@ export default {
     
     getStatusType(status) {
       const typeMap = {
-        'active': 'success',
-        'disabled': 'danger',
-        'pending': 'warning'
+        1: 'success',
+        0: 'danger'
       };
       return typeMap[status] || 'info';
     },
     
     getStatusText(status) {
       const textMap = {
-        'active': '正常',
-        'disabled': '禁用',
-        'pending': '待审核'
+        1: '正常',
+        0: '禁用'
       };
       return textMap[status] || '未知';
     },
