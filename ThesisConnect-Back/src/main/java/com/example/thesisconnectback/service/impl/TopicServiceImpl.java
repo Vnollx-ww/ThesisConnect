@@ -106,6 +106,12 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
         stats.put("mediumTopics", mediumTopics.size());
         stats.put("hardTopics", hardTopics.size());
         
+        // 计算课题增长率（本月新增课题数 / 上月新增课题数）
+        long currentMonthTopics = getCurrentMonthTopicCount();
+        long lastMonthTopics = getLastMonthTopicCount();
+        double topicGrowth = lastMonthTopics > 0 ? ((double)(currentMonthTopics - lastMonthTopics) / lastMonthTopics) * 100 : 0;
+        stats.put("topicGrowth", Math.round(topicGrowth * 100) / 100.0);
+        
         return stats;
     }
 
@@ -218,5 +224,25 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
         stats.put("totalViews", totalViews);
         
         return stats;
+    }
+    
+    /**
+     * 获取本月新增课题数
+     */
+    private long getCurrentMonthTopicCount() {
+        QueryWrapper<Topic> queryWrapper = new QueryWrapper<>();
+        queryWrapper.apply("DATE_FORMAT(create_time, '%Y-%m') = DATE_FORMAT(NOW(), '%Y-%m')")
+                   .eq("deleted", 0);
+        return count(queryWrapper);
+    }
+    
+    /**
+     * 获取上月新增课题数
+     */
+    private long getLastMonthTopicCount() {
+        QueryWrapper<Topic> queryWrapper = new QueryWrapper<>();
+        queryWrapper.apply("DATE_FORMAT(create_time, '%Y-%m') = DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 1 MONTH), '%Y-%m')")
+                   .eq("deleted", 0);
+        return count(queryWrapper);
     }
 }

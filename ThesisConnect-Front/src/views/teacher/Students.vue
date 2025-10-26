@@ -206,7 +206,7 @@
             </div>
           </el-tab-pane>
           
-          <el-tab-pane label="学习进度" name="progress">
+          <el-tab-pane label="课题进度" name="progress">
             <div class="progress-content">
               <div class="progress-overview">
                 <el-progress 
@@ -215,18 +215,48 @@
                   :stroke-width="8">
                 </el-progress>
                 <p style="text-align: center; margin-top: 10px; color: #666;">
-                  当前进度：{{ selectedStudent.progress || 0 }}%
+                  整体进度：{{ selectedStudent.progress || 0 }}%
                 </p>
               </div>
               
-              <div class="progress-description">
-                <h4>进度描述</h4>
-                <p>{{ selectedStudent.progress_description || '暂无进度描述' }}</p>
+              <!-- 进度时间线 -->
+              <div class="progress-timeline" v-if="studentProgressList && studentProgressList.length > 0">
+                <h4>进度记录</h4>
+                <el-timeline>
+                  <el-timeline-item
+                    v-for="(progress, index) in studentProgressList"
+                    :key="index"
+                    :timestamp="formatDateTime(progress.createTime)"
+                    :type="progress.milestoneStatus === 'completed' ? 'success' : progress.milestoneStatus === 'current' ? 'primary' : 'info'">
+                    <div class="milestone-content">
+                      <div class="milestone-header">
+                        <h4>{{ progress.milestoneTitle || '进度更新' }}</h4>
+                        <div class="milestone-status">
+                          <el-tag 
+                            :type="progress.milestoneStatus === 'completed' ? 'success' : progress.milestoneStatus === 'current' ? 'primary' : 'info'"
+                            size="small">
+                            {{ getMilestoneStatusText(progress.milestoneStatus) }}
+                          </el-tag>
+                        </div>
+                      </div>
+                      <p class="milestone-description">{{ progress.description || progress.milestoneDescription || '暂无描述' }}</p>
+                      <div class="milestone-footer">
+                        <span class="progress-text">进度: {{ progress.percentage }}%</span>
+                        <span class="progress-time">{{ formatDateTime(progress.createTime) }}</span>
+                      </div>
+                      <div class="problems-section" v-if="progress.problems">
+                        <h5>遇到的问题</h5>
+                        <p>{{ progress.problems }}</p>
+                      </div>
+                    </div>
+                  </el-timeline-item>
+                </el-timeline>
               </div>
               
-              <div class="problems-section" v-if="selectedStudent.problems">
-                <h4>遇到的问题</h4>
-                <p>{{ selectedStudent.problems }}</p>
+              <!-- 无进度记录时的提示 -->
+              <div v-else class="no-progress">
+                <i class="el-icon-time"></i>
+                <p>暂无进度记录</p>
               </div>
             </div>
           </el-tab-pane>
@@ -413,6 +443,7 @@ export default {
       activeTab: 'basic',
       selectedStudent: null,
       selectedTopic: null,
+      studentProgressList: [],
       
       messageForm: {
         receiver: '',
@@ -537,6 +568,9 @@ export default {
     viewStudentDetail(student) {
       this.selectedStudent = student;
       this.studentDialogVisible = true;
+      this.activeTab = 'basic';
+      // 加载学生进度数据
+      this.loadStudentProgress(student.id);
     },
     
     sendMessage(student) {
@@ -686,6 +720,41 @@ export default {
       if (progress >= 60) return '#e6a23c';
       if (progress >= 40) return '#f56c6c';
       return '#909399';
+    },
+    
+    // 加载学生进度数据
+    async loadStudentProgress(studentId) {
+      try {
+        const response = await progressApi.getProgressByStudent(studentId);
+        if (response.code === 200) {
+          this.studentProgressList = response.data || [];
+          // 按时间倒序排列，最新的在前面
+          this.studentProgressList.sort((a, b) => new Date(b.createTime) - new Date(a.createTime));
+        } else {
+          this.studentProgressList = [];
+          console.error('获取学生进度失败:', response.message);
+        }
+      } catch (error) {
+        console.error('加载学生进度失败:', error);
+        this.studentProgressList = [];
+      }
+    },
+    
+    // 获取里程碑状态文本
+    getMilestoneStatusText(status) {
+      const statusMap = {
+        'completed': '已完成',
+        'current': '进行中',
+        'pending': '待开始'
+      };
+      return statusMap[status] || '未知';
+    },
+    
+    // 格式化时间显示
+    formatDateTime(dateTime) {
+      if (!dateTime) return '';
+      // 将 ISO 8601 格式转换为更友好的显示格式
+      return dateTime.replace('T', ' ').replace(/\.\d{3}Z?$/, '');
     }
   }
 }
@@ -874,16 +943,102 @@ export default {
   margin-bottom: 30px;
 }
 
-.milestone-content h4 {
+.progress-timeline {
+  margin-top: 20px;
+}
+
+.progress-timeline h4 {
   font-size: 16px;
   font-weight: 600;
   color: #2c3e50;
+  margin: 0 0 15px 0;
+}
+
+.milestone-content {
+  background: #f8f9fa;
+  border-radius: 6px;
+  padding: 15px;
+  margin-bottom: 10px;
+}
+
+.milestone-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.milestone-header h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0;
+  flex: 1;
+}
+
+.milestone-status {
+  margin-left: 10px;
+}
+
+.milestone-description {
+  color: #606266;
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.milestone-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.progress-text {
+  font-size: 12px;
+  color: #999;
+  font-weight: 500;
+}
+
+.progress-time {
+  font-size: 12px;
+  color: #999;
+}
+
+.problems-section {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #e4e7ed;
+}
+
+.problems-section h5 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #f56c6c;
   margin: 0 0 5px 0;
 }
 
-.milestone-content p {
+.problems-section p {
   color: #606266;
-  margin: 0 0 8px 0;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.no-progress {
+  text-align: center;
+  padding: 40px 20px;
+  color: #909399;
+}
+
+.no-progress i {
+  font-size: 48px;
+  margin-bottom: 15px;
+  display: block;
+}
+
+.no-progress p {
+  margin: 0;
   font-size: 14px;
 }
 

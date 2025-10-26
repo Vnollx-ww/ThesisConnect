@@ -111,7 +111,8 @@ public class ProgressController {
             String role = (String) request.getAttribute("role");
             Long userId = (Long) request.getAttribute("userId");
             
-            if (!"admin".equals(role) && !userId.equals(studentId)) {
+            // 允许管理员、教师和学生本人查看进度
+            if (!"admin".equals(role) && !"teacher".equals(role) && !userId.equals(studentId)) {
                 return Result.forbidden("权限不足");
             }
 

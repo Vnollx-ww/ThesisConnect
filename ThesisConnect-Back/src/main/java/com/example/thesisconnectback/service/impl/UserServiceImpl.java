@@ -121,6 +121,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         List<User> activeUsers = findByStatus(1);
         stats.put("activeUsers", activeUsers.size());
         
+        // 计算用户增长率（本月新增用户数 / 上月新增用户数）
+        long currentMonthUsers = getCurrentMonthUserCount();
+        long lastMonthUsers = getLastMonthUserCount();
+        double userGrowth = lastMonthUsers > 0 ? ((double)(currentMonthUsers - lastMonthUsers) / lastMonthUsers) * 100 : 0;
+        stats.put("userGrowth", Math.round(userGrowth * 100) / 100.0);
+        
         return stats;
     }
 
@@ -221,5 +227,25 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         stats.put("avgProgress", Math.round(avgProgress * 100) / 100.0);
         
         return stats;
+    }
+    
+    /**
+     * 获取本月新增用户数
+     */
+    private long getCurrentMonthUserCount() {
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.apply("DATE_FORMAT(create_time, '%Y-%m') = DATE_FORMAT(NOW(), '%Y-%m')")
+                   .eq("deleted", 0);
+        return count(queryWrapper);
+    }
+    
+    /**
+     * 获取上月新增用户数
+     */
+    private long getLastMonthUserCount() {
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.apply("DATE_FORMAT(create_time, '%Y-%m') = DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 1 MONTH), '%Y-%m')")
+                   .eq("deleted", 0);
+        return count(queryWrapper);
     }
 }

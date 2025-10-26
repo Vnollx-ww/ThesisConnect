@@ -4,7 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.thesisconnectback.common.Result;
 import com.example.thesisconnectback.entity.Topic;
+import com.example.thesisconnectback.entity.User;
 import com.example.thesisconnectback.service.TopicService;
+import com.example.thesisconnectback.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -25,6 +27,8 @@ public class TopicController {
 
     @Autowired
     private TopicService topicService;
+    @Autowired
+    private UserService userService;
 
     /**
      * 获取课题列表（分页）
@@ -109,7 +113,7 @@ public class TopicController {
 
             Long userId = (Long) request.getAttribute("userId");
             topic.setTeacherId(userId);
-
+            topic.setTeacherName((String) request.getAttribute("username"));
             boolean success = topicService.publishTopic(topic);
             if (success) {
                 return Result.success("课题发布成功", topic);

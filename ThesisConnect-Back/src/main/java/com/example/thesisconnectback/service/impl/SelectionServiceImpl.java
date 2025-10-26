@@ -1,5 +1,6 @@
 package com.example.thesisconnectback.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.thesisconnectback.entity.Selection;
 import com.example.thesisconnectback.entity.Topic;
@@ -171,11 +172,87 @@ public class SelectionServiceImpl extends ServiceImpl<SelectionMapper, Selection
         List<Selection> pendingSelections = findByStatus("pending");
         List<Selection> approvedSelections = findByStatus("approved");
         List<Selection> rejectedSelections = findByStatus("rejected");
+        List<Selection> activeSelections = findByStatus("active");
+        List<Selection> completedSelections = findByStatus("completed");
         
         stats.put("pendingSelections", pendingSelections.size());
         stats.put("approvedSelections", approvedSelections.size());
         stats.put("rejectedSelections", rejectedSelections.size());
+        stats.put("activeSelections", activeSelections.size());
+        stats.put("completedSelections", completedSelections.size());
+        
+        // 计算选题增长率（本月新增选题数 / 上月新增选题数）
+        long currentMonthSelections = getCurrentMonthSelectionCount();
+        long lastMonthSelections = getLastMonthSelectionCount();
+        double selectionGrowth = lastMonthSelections > 0 ? ((double)(currentMonthSelections - lastMonthSelections) / lastMonthSelections) * 100 : 0;
+        stats.put("selectionGrowth", Math.round(selectionGrowth * 100) / 100.0);
+        
+        // 计算完成率（已完成选题数 / 总选题数）
+        double completionRate = totalSelections > 0 ? ((double)completedSelections.size() / totalSelections) * 100 : 0;
+        stats.put("completionRate", Math.round(completionRate * 100) / 100.0);
+        
+        // 计算完成率增长率（本月完成率 - 上月完成率）
+        double currentMonthCompletionRate = getCurrentMonthCompletionRate();
+        double lastMonthCompletionRate = getLastMonthCompletionRate();
+        double completionGrowth = currentMonthCompletionRate - lastMonthCompletionRate;
+        stats.put("completionGrowth", Math.round(completionGrowth * 100) / 100.0);
         
         return stats;
+    }
+    
+    /**
+     * 获取本月新增选题数
+     */
+    private long getCurrentMonthSelectionCount() {
+        QueryWrapper<Selection> queryWrapper = new QueryWrapper<>();
+        queryWrapper.apply("DATE_FORMAT(create_time, '%Y-%m') = DATE_FORMAT(NOW(), '%Y-%m')")
+                   .eq("deleted", 0);
+        return count(queryWrapper);
+    }
+    
+    /**
+     * 获取上月新增选题数
+     */
+    private long getLastMonthSelectionCount() {
+        QueryWrapper<Selection> queryWrapper = new QueryWrapper<>();
+        queryWrapper.apply("DATE_FORMAT(create_time, '%Y-%m') = DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 1 MONTH), '%Y-%m')")
+                   .eq("deleted", 0);
+        return count(queryWrapper);
+    }
+    
+    /**
+     * 获取本月完成率
+     */
+    private double getCurrentMonthCompletionRate() {
+        QueryWrapper<Selection> totalQuery = new QueryWrapper<>();
+        totalQuery.apply("DATE_FORMAT(create_time, '%Y-%m') = DATE_FORMAT(NOW(), '%Y-%m')")
+                  .eq("deleted", 0);
+        long total = count(totalQuery);
+        
+        QueryWrapper<Selection> completedQuery = new QueryWrapper<>();
+        completedQuery.apply("DATE_FORMAT(create_time, '%Y-%m') = DATE_FORMAT(NOW(), '%Y-%m')")
+                     .eq("status", "completed")
+                     .eq("deleted", 0);
+        long completed = count(completedQuery);
+        
+        return total > 0 ? ((double)completed / total) * 100 : 0;
+    }
+    
+    /**
+     * 获取上月完成率
+     */
+    private double getLastMonthCompletionRate() {
+        QueryWrapper<Selection> totalQuery = new QueryWrapper<>();
+        totalQuery.apply("DATE_FORMAT(create_time, '%Y-%m') = DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 1 MONTH), '%Y-%m')")
+                  .eq("deleted", 0);
+        long total = count(totalQuery);
+        
+        QueryWrapper<Selection> completedQuery = new QueryWrapper<>();
+        completedQuery.apply("DATE_FORMAT(create_time, '%Y-%m') = DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 1 MONTH), '%Y-%m')")
+                     .eq("status", "completed")
+                     .eq("deleted", 0);
+        long completed = count(completedQuery);
+        
+        return total > 0 ? ((double)completed / total) * 100 : 0;
     }
 }
