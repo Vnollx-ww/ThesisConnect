@@ -67,7 +67,7 @@
                 </div>
                 <div class="meta-item">
                   <i class="el-icon-time"></i>
-                  <span>{{ topic.deadline }}</span>
+                  <span>{{ formatDate(topic.deadline) }}</span>
                 </div>
               </div>
               
@@ -127,7 +127,7 @@
           <p><strong>指导教师：</strong>{{ selectedTopic.teacherName || selectedTopic.teacher }}</p>
           <p><strong>专业要求：</strong>{{ selectedTopic.major }}</p>
           <p><strong>难度等级：</strong>{{ getDifficultyText(selectedTopic.difficulty) }}</p>
-          <p><strong>截止时间：</strong>{{ selectedTopic.deadline }}</p>
+          <p><strong>截止时间：</strong>{{ formatDate(selectedTopic.deadline) }}</p>
           <p><strong>已选人数：</strong>{{ selectedTopic.selectedCount }}/{{ selectedTopic.maxStudents }}</p>
         </div>
         <div class="detail-content">
@@ -324,6 +324,12 @@ export default {
     handleClose(done) {
       this.selectedTopic = null;
       done();
+    },
+    
+    formatDate(dateStr) {
+      if (!dateStr) return '-'
+      // 处理 ISO 格式 2025-10-26T16:00:00 或普通格式 2025-10-26 16:00:00
+      return dateStr.split('T')[0].split(' ')[0]
     },
     
     // 处理技术要求格式

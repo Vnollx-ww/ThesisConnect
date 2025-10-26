@@ -80,9 +80,9 @@ public interface UserMapper extends BaseMapper<User> {
     /**
      * 根据教师获取学生列表（包含选题信息）
      */
-    @Select("SELECT DISTINCT u.*, s.topic_id, s.topic_title, s.selection_time, s.status as selection_status, " +
-            "s.progress, s.progress_description, s.problems, s.final_grade, " +
-            "t.description as topic_description, t.major, t.difficulty, t.max_students, " +
+    @Select("SELECT DISTINCT u.*, s.id as selection_id, s.topic_id, s.topic_title, s.selection_time, s.status as selection_status, " +
+            "s.progress, s.progress_description, s.problems, s.final_grade, s.create_time as selection_create_time, " +
+            "t.description as topic_description, t.major as topic_major, t.difficulty, t.max_students, " +
             "t.deadline, t.requirements, t.expected_outcome, t.view_count, t.rating, " +
             "t.status as topic_status, t.selected_count " +
             "FROM sys_user u " +

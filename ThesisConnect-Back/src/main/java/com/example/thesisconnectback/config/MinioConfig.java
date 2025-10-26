@@ -1,0 +1,29 @@
+package com.example.thesisconnectback.config;
+
+
+import io.minio.MinioClient;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+
+public class MinioConfig {
+
+    @Value("http://106.54.223.38:9000")
+    private String endpoint;
+
+    @Value("vnollxvnollx")
+    private String accessKey;
+
+    @Value("vnollxvnollxvnollx")
+    private String secretKey;
+
+    @Bean
+    public MinioClient minioClient() {
+        return MinioClient.builder()
+                .endpoint(endpoint)
+                .credentials(accessKey, secretKey)
+                .build();
+    }
+}

@@ -61,7 +61,7 @@ public class SelectionServiceImpl extends ServiceImpl<SelectionMapper, Selection
             return false;
         }
 
-        // 检查课题是否已满员
+        // 检查课题是否已满员（只检查已审核通过的数量）
         if (isTopicFull(topicId)) {
             return false;
         }
@@ -93,7 +93,16 @@ public class SelectionServiceImpl extends ServiceImpl<SelectionMapper, Selection
         selection.setCreateTime(LocalDateTime.now());
         selection.setUpdateTime(LocalDateTime.now());
 
-        return save(selection);
+        boolean saved = save(selection);
+        
+        // 如果保存成功，更新课题的已选学生数为待审核+已审核的数量
+        if (saved) {
+            // 计算该课题的选题总数（包括待审核和已审核的）
+            int totalSelections = selectionMapper.countByTopicId(topicId);
+            topicMapper.updateSelectedCount(topicId, totalSelections);
+        }
+        
+        return saved;
     }
 
     @Override
@@ -101,12 +110,16 @@ public class SelectionServiceImpl extends ServiceImpl<SelectionMapper, Selection
     public boolean cancelSelection(Long selectionId) {
         Selection selection = getById(selectionId);
         if (selection != null && "pending".equals(selection.getStatus())) {
-            // 更新课题已选学生数
-            Topic topic = topicMapper.selectById(selection.getTopicId());
-            if (topic != null) {
-                topicMapper.updateSelectedCount(topic.getId(), topic.getSelectedCount() - 1);
+            Long topicId = selection.getTopicId();
+            boolean removed = removeById(selectionId);
+            
+            // 如果删除成功，更新课题的已选学生数
+            if (removed) {
+                int totalSelections = selectionMapper.countByTopicId(topicId);
+                topicMapper.updateSelectedCount(topicId, totalSelections);
             }
-            return removeById(selectionId);
+            
+            return removed;
         }
         return false;
     }
@@ -119,15 +132,16 @@ public class SelectionServiceImpl extends ServiceImpl<SelectionMapper, Selection
             selection.setStatus(status);
             selection.setUpdateTime(LocalDateTime.now());
             
-            if ("approved".equals(status)) {
-                // 更新课题已选学生数
-                Topic topic = topicMapper.selectById(selection.getTopicId());
-                if (topic != null) {
-                    topicMapper.updateSelectedCount(topic.getId(), topic.getSelectedCount() + 1);
-                }
+            boolean updated = updateById(selection);
+            
+            // 如果更新成功，更新课题的已选学生数（因为状态改变可能影响显示）
+            if (updated) {
+                Long topicId = selection.getTopicId();
+                int totalSelections = selectionMapper.countByTopicId(topicId);
+                topicMapper.updateSelectedCount(topicId, totalSelections);
             }
             
-            return updateById(selection);
+            return updated;
         }
         return false;
     }

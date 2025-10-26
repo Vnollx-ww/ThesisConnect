@@ -49,6 +49,12 @@ public interface SelectionMapper extends BaseMapper<Selection> {
      */
     @Select("SELECT COUNT(*) FROM sys_selection WHERE topic_id = #{topicId} AND status = 'approved' AND deleted = 0")
     int countApprovedByTopicId(@Param("topicId") Long topicId);
+    
+    /**
+     * 统计某个课题的所有选题数量（包括待审核和已审核的）
+     */
+    @Select("SELECT COUNT(*) FROM sys_selection WHERE topic_id = #{topicId} AND deleted = 0")
+    int countByTopicId(@Param("topicId") Long topicId);
 
     /**
      * 统计各状态选题数量

@@ -396,6 +396,9 @@ export default {
         // 获取教师选题列表
         await this.loadSelections()
         
+        // 更新metrics中的totalStudents（基于选题列表）
+        this.updateMetrics()
+        
       } catch (error) {
         console.error('加载数据失败:', error)
         this.$message.error('加载数据失败')
@@ -411,7 +414,7 @@ export default {
           const data = response.data
           this.metrics = {
             totalTopics: data.totalTopics || 0,
-            totalStudents: data.totalStudents || 0,
+            totalStudents: 0, // 将在 loadSelections 后更新
             avgRating: data.avgRating || 0,
             completionRate: data.completedTopics && data.totalTopics > 0 
               ? Math.round((data.completedTopics / data.totalTopics) * 100) 
@@ -423,13 +426,17 @@ export default {
       }
     },
     
+    updateMetrics() {
+      // 使用选题列表的长度来更新 totalStudents
+      this.metrics.totalStudents = this.selections.length
+    },
+    
     async loadStudentStats() {
       try {
         const response = await statsApi.getTeacherStudentStats(this.teacherId)
         if (response.code === 200 && response.data) {
           // 这个接口返回统计信息，不需要处理学生列表
           // 学生列表从selections中获取
-          console.log('学生统计信息:', response.data)
         }
       } catch (error) {
         console.error('获取学生统计失败:', error)
@@ -599,7 +606,6 @@ export default {
       }
       
       this.trendData = { dates, values }
-      console.log('趋势数据:', this.trendData)
     },
     
     updateProgressData() {
@@ -627,8 +633,6 @@ export default {
         value: range.value,
         name: range.name
       }))
-      
-      console.log('进度分布数据:', this.progressDataArray)
     },
     
     getDifficultyType(difficulty) {
@@ -651,7 +655,10 @@ export default {
     
     getStatusType(status) {
       const typeMap = {
+        'pending': 'warning',
+        'approved': 'success',
         'active': 'success',
+        'rejected': 'danger',
         'completed': 'info',
         'paused': 'warning'
       };
@@ -660,7 +667,10 @@ export default {
     
     getStatusText(status) {
       const textMap = {
+        'pending': '待审核',
+        'approved': '已通过',
         'active': '进行中',
+        'rejected': '已拒绝',
         'completed': '已完成',
         'paused': '已暂停'
       };

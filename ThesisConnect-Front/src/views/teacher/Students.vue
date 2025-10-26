@@ -131,11 +131,26 @@
           </el-table-column>
           <el-table-column prop="phone" label="联系电话" width="120"></el-table-column>
           <el-table-column prop="email" label="邮箱" width="150"></el-table-column>
-          <el-table-column label="操作" width="280">
+          <el-table-column label="操作" width="170">
             <template slot-scope="scope">
-              <el-button type="text" size="small" @click="viewStudentDetail(scope.row)">详情</el-button>
-              <el-button type="text" size="small" @click="updateProgress(scope.row)">更新进度</el-button>
-              <el-button type="text" size="small" @click="sendMessage(scope.row)">发送消息</el-button>
+              <el-button 
+                v-if="scope.row.selection_status === 'pending'" 
+                type="text" 
+                size="small" 
+                style="color: #67C23A; margin-right: 5px;"
+                @click="reviewSelection(scope.row, 'approved')">
+                通过
+              </el-button>
+              <el-button 
+                v-if="scope.row.selection_status === 'pending'" 
+                type="text" 
+                size="small" 
+                style="color: #F56C6C; margin-right: 5px;"
+                @click="reviewSelection(scope.row, 'rejected')">
+                拒绝
+              </el-button>
+              <el-button type="text" size="small" @click="viewStudentDetail(scope.row)" style="margin-right: 5px;">详情</el-button>
+              <el-button type="text" size="small" @click="sendMessage(scope.row)" style="margin-right: 5px;">消息</el-button>
               <el-button type="text" size="small" @click="evaluateStudent(scope.row)">评价</el-button>
             </template>
           </el-table-column>
@@ -277,7 +292,7 @@
               </div>
               <div class="info-item">
                 <label>专业要求：</label>
-                <span>{{ selectedStudent.major || '不限专业' }}</span>
+                <span>{{ selectedStudent.topic_major || '不限专业' }}</span>
               </div>
             </div>
           </el-tab-pane>
@@ -426,7 +441,7 @@
 </template>
 
 <script>
-import { userApi, progressApi } from '@/api'
+import { userApi, progressApi, selectionApi } from '@/api'
 
 export default {
   name: 'TeacherStudents',
@@ -596,6 +611,45 @@ export default {
     submitEvaluation() {
       this.evaluateDialogVisible = false;
       this.$message.success('评价提交成功！');
+    },
+    
+    async reviewSelection(student, status) {
+      const action = status === 'approved' ? '通过' : '拒绝';
+      
+      this.$confirm(`确定要${action}该学生的选题申请吗？`, `确认${action}`, {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(async () => {
+        try {
+          // 找到该学生对应的selection记录
+          const selectionId = student.selection_id;
+          
+          if (!selectionId) {
+            this.$message.error('无法获取选题记录ID');
+            return;
+          }
+          
+          const reviewData = {
+            status: status
+          };
+          
+          const response = await selectionApi.reviewSelection(selectionId, reviewData);
+          if (response.code === 200) {
+            this.$message.success(`${action}成功！`);
+            // 重新加载学生列表
+            await this.loadStudents();
+            await this.loadStats();
+          } else {
+            this.$message.error(response.message || `${action}失败`);
+          }
+        } catch (error) {
+          console.error(`${action}申请失败:`, error);
+          this.$message.error(`${action}失败，请稍后重试`);
+        }
+      }).catch(() => {
+        // 用户取消
+      });
     },
     
     viewTopic(student) {

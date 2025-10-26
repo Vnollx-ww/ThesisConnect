@@ -110,74 +110,10 @@ const router = new VueRouter({
             ]
         },
         
-        // 兼容旧路由
+        // 兼容旧路由（已废弃，保留以便向后兼容）
         {
             path: '/layout',
-            name: '系统管理',
-            component: Layout,
-            redirect: '/admin/dashboard', // 默认重定向到管理员数据概览
-            children:[
-                // 学生路由
-                {
-                    path: 'student/topics',
-                    name: '选题列表',
-                    component: () => import('@/views/student/Topics.vue')
-                },
-                {
-                    path: 'student/my-topic',
-                    name: '我的选题',
-                    component: () => import('@/views/student/MyTopic.vue')
-                },
-                {
-                    path: 'student/profile',
-                    name: '个人信息',
-                    component: () => import('@/views/student/Profile.vue')
-                },
-                
-                // 教师路由
-                {
-                    path: 'teacher/topics',
-                    name: '课题管理',
-                    component: () => import('@/views/teacher/Topics.vue')
-                },
-                {
-                    path: 'teacher/students',
-                    name: '学生管理',
-                    component: () => import('@/views/teacher/Students.vue')
-                },
-                {
-                    path: 'teacher/reports',
-                    name: '统计报表',
-                    component: () => import('@/views/teacher/Reports.vue')
-                },
-                {
-                    path: 'teacher/profile',
-                    name: '个人设置',
-                    component: () => import('@/views/teacher/Profile.vue')
-                },
-                
-                // 管理员路由
-                {
-                    path: 'admin/dashboard',
-                    name: '数据概览',
-                    component: () => import('@/views/admin/Dashboard.vue')
-                },
-                {
-                    path: 'admin/users',
-                    name: '用户管理',
-                    component: () => import('@/views/admin/Users.vue')
-                },
-                {
-                    path: 'admin/topics',
-                    name: '课题管理',
-                    component: () => import('@/views/admin/Topics.vue')
-                },
-                {
-                    path: 'admin/system',
-                    name: '系统设置',
-                    component: () => import('@/views/admin/System.vue')
-                }
-            ]
+            redirect: '/login' // 重定向到登录页
         },
     ]
 });
