@@ -352,5 +352,20 @@ export const statsApi = {
   // 获取课题难度分布
   getTopicDifficultyDistribution() {
     return request.get('/api/stats/topic-difficulty-distribution')
+  },
+  
+  // 获取教师课题统计
+  getTeacherTopicStats(teacherId) {
+    return request.get(`/api/topics/teacher/${teacherId}/stats`)
+  },
+  
+  // 获取教师学生统计
+  getTeacherStudentStats(teacherId) {
+    return request.get(`/api/users/teacher/${teacherId}/student-stats`)
+  },
+  
+  // 获取教师选题列表
+  getTeacherSelections(teacherId) {
+    return request.get(`/api/selections/teacher/${teacherId}`)
   }
 }

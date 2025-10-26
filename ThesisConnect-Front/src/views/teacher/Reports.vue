@@ -137,69 +137,72 @@
       <el-tabs v-model="activeTab" type="card">
         <!-- 课题统计 -->
         <el-tab-pane label="课题统计" name="topics">
-          <el-table :data="topicStats" style="width: 100%">
-            <el-table-column prop="title" label="课题名称" width="200"></el-table-column>
-            <el-table-column prop="difficulty" label="难度" width="100">
+            <el-table :data="topicStats" style="width: 100%" v-loading="loading">
+            <el-table-column type="index" label="序号" width="60" align="center"></el-table-column>
+            <el-table-column prop="title" label="课题名称" min-width="250" show-overflow-tooltip></el-table-column>
+            <el-table-column prop="difficulty" label="难度" width="100" align="center">
               <template slot-scope="scope">
                 <el-tag :type="getDifficultyType(scope.row.difficulty)" size="small">
                   {{ getDifficultyText(scope.row.difficulty) }}
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column prop="selectedCount" label="选择人数" width="100"></el-table-column>
-            <el-table-column prop="maxStudents" label="最大人数" width="100"></el-table-column>
-            <el-table-column prop="completionRate" label="完成率" width="100">
+            <el-table-column prop="selectedCount" label="选择人数" width="110" align="center"></el-table-column>
+            <el-table-column prop="maxStudents" label="最大人数" width="110" align="center"></el-table-column>
+            <el-table-column prop="completionRate" label="完成率" width="110" align="center">
               <template slot-scope="scope">
                 {{ scope.row.completionRate }}%
               </template>
             </el-table-column>
-            <el-table-column prop="avgProgress" label="平均进度" width="100">
+            <el-table-column prop="avgProgress" label="平均进度" width="110" align="center">
               <template slot-scope="scope">
                 {{ scope.row.avgProgress }}%
               </template>
             </el-table-column>
-            <el-table-column prop="avgRating" label="平均评分" width="100">
+            <el-table-column prop="avgRating" label="平均评分" width="110" align="center">
               <template slot-scope="scope">
-                <el-rate v-model="scope.row.avgRating" disabled show-score></el-rate>
+                {{ scope.row.avgRating ? scope.row.avgRating.toFixed(1) : '-' }}
               </template>
             </el-table-column>
-            <el-table-column prop="viewCount" label="浏览量" width="100"></el-table-column>
+            <el-table-column prop="viewCount" label="浏览量" width="110" align="center"></el-table-column>
           </el-table>
         </el-tab-pane>
         
         <!-- 学生统计 -->
         <el-tab-pane label="学生统计" name="students">
-          <el-table :data="studentStats" style="width: 100%">
-            <el-table-column prop="name" label="学生姓名" width="100"></el-table-column>
-            <el-table-column prop="studentId" label="学号" width="120"></el-table-column>
-            <el-table-column prop="topicTitle" label="课题" width="200"></el-table-column>
-            <el-table-column prop="progress" label="进度" width="100">
+          <el-table :data="studentStats" style="width: 100%" v-loading="loading">
+            <el-table-column type="index" label="序号" width="60" align="center"></el-table-column>
+            <el-table-column prop="name" label="学生姓名" width="120" align="center"></el-table-column>
+            <el-table-column prop="studentId" label="学号" width="150" align="center"></el-table-column>
+            <el-table-column prop="topicTitle" label="课题" min-width="220" show-overflow-tooltip></el-table-column>
+            <el-table-column prop="progress" label="进度" width="110" align="center">
               <template slot-scope="scope">
                 {{ scope.row.progress }}%
               </template>
             </el-table-column>
-            <el-table-column prop="status" label="状态" width="100">
+            <el-table-column prop="status" label="状态" width="110" align="center">
               <template slot-scope="scope">
                 <el-tag :type="getStatusType(scope.row.status)" size="small">
                   {{ getStatusText(scope.row.status) }}
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column prop="selectedTime" label="选择时间" width="120"></el-table-column>
-            <el-table-column prop="lastUpdate" label="最后更新" width="120"></el-table-column>
-            <el-table-column prop="documentsCount" label="文档数" width="100"></el-table-column>
+            <el-table-column prop="selectedTime" label="选择时间" width="130" align="center"></el-table-column>
+            <el-table-column prop="lastUpdate" label="最后更新" width="130" align="center"></el-table-column>
+            <el-table-column prop="documentsCount" label="文档数" width="110" align="center"></el-table-column>
           </el-table>
         </el-tab-pane>
         
         <!-- 时间统计 -->
         <el-tab-pane label="时间统计" name="time">
-          <el-table :data="timeStats" style="width: 100%">
-            <el-table-column prop="date" label="日期" width="120"></el-table-column>
-            <el-table-column prop="newTopics" label="新增课题" width="100"></el-table-column>
-            <el-table-column prop="newSelections" label="新增选择" width="100"></el-table-column>
-            <el-table-column prop="progressUpdates" label="进度更新" width="100"></el-table-column>
-            <el-table-column prop="documentUploads" label="文档上传" width="100"></el-table-column>
-            <el-table-column prop="totalViews" label="总浏览量" width="100"></el-table-column>
+          <el-table :data="timeStats" style="width: 100%" v-loading="loading">
+            <el-table-column type="index" label="序号" width="60" align="center"></el-table-column>
+            <el-table-column prop="date" label="日期" width="160" align="center"></el-table-column>
+            <el-table-column prop="newTopics" label="新增课题" width="140" align="center"></el-table-column>
+            <el-table-column prop="newSelections" label="新增选择" width="140" align="center"></el-table-column>
+            <el-table-column prop="progressUpdates" label="进度更新" width="140" align="center"></el-table-column>
+            <el-table-column prop="documentUploads" label="文档上传" width="140" align="center"></el-table-column>
+            <el-table-column prop="totalViews" label="总浏览量" width="140" align="center"></el-table-column>
           </el-table>
         </el-tab-pane>
       </el-tabs>
@@ -208,131 +211,211 @@
 </template>
 
 <script>
+import { topicApi, selectionApi, statsApi } from '@/api'
+import { getCurrentUser } from '@/utils/user'
+
 export default {
   name: 'TeacherReports',
   data() {
     return {
+      teacherId: null,
       dateRange: [],
       selectedTopic: '',
       trendPeriod: 'month',
       activeTab: 'topics',
+      loading: false,
       
       metrics: {
-        totalTopics: 8,
-        totalStudents: 12,
-        avgRating: 4.5,
-        completionRate: 85
+        totalTopics: 0,
+        totalStudents: 0,
+        avgRating: 0,
+        completionRate: 0
       },
       
-      topics: [
-        { id: 1, title: '基于深度学习的图像识别系统' },
-        { id: 2, title: '校园二手交易平台设计与实现' },
-        { id: 3, title: '智能家居控制系统' }
-      ],
+      topics: [],
+      fullTopics: [], // 完整的课题列表，包含所有字段
+      selections: [], // 选题列表
       
-      topicStats: [
-        {
-          title: '基于深度学习的图像识别系统',
-          difficulty: 'hard',
-          selectedCount: 2,
-          maxStudents: 3,
-          completionRate: 80,
-          avgProgress: 35,
-          avgRating: 4.5,
-          viewCount: 156
-        },
-        {
-          title: '校园二手交易平台设计与实现',
-          difficulty: 'medium',
-          selectedCount: 1,
-          maxStudents: 2,
-          completionRate: 50,
-          avgProgress: 15,
-          avgRating: 4.2,
-          viewCount: 89
-        },
-        {
-          title: '智能家居控制系统',
-          difficulty: 'medium',
-          selectedCount: 0,
-          maxStudents: 2,
-          completionRate: 0,
-          avgProgress: 0,
-          avgRating: 0,
-          viewCount: 67
-        }
-      ],
-      
-      studentStats: [
-        {
-          name: '张三',
-          studentId: '2021001001',
-          topicTitle: '基于深度学习的图像识别系统',
-          progress: 35,
-          status: 'active',
-          selectedTime: '2024-01-15',
-          lastUpdate: '2024-02-15',
-          documentsCount: 3
-        },
-        {
-          name: '李四',
-          studentId: '2021001002',
-          topicTitle: '基于深度学习的图像识别系统',
-          progress: 20,
-          status: 'active',
-          selectedTime: '2024-01-20',
-          lastUpdate: '2024-02-10',
-          documentsCount: 2
-        },
-        {
-          name: '王五',
-          studentId: '2021001003',
-          topicTitle: '校园二手交易平台设计与实现',
-          progress: 15,
-          status: 'active',
-          selectedTime: '2024-01-25',
-          lastUpdate: '2024-02-12',
-          documentsCount: 1
-        }
-      ],
-      
-      timeStats: [
-        { date: '2024-02-15', newTopics: 1, newSelections: 0, progressUpdates: 3, documentUploads: 2, totalViews: 45 },
-        { date: '2024-02-14', newTopics: 0, newSelections: 1, progressUpdates: 2, documentUploads: 1, totalViews: 38 },
-        { date: '2024-02-13', newTopics: 0, newSelections: 0, progressUpdates: 1, documentUploads: 0, totalViews: 32 },
-        { date: '2024-02-12', newTopics: 1, newSelections: 1, progressUpdates: 2, documentUploads: 3, totalViews: 56 },
-        { date: '2024-02-11', newTopics: 0, newSelections: 0, progressUpdates: 1, documentUploads: 1, totalViews: 28 }
-      ]
+      topicStats: [],
+      studentStats: [],
+      timeStats: []
     }
   },
-  mounted() {
-    this.initCharts();
+  async mounted() {
+    await this.loadTeacherData()
+    this.initCharts()
   },
   methods: {
+    async loadTeacherData() {
+      try {
+        this.loading = true
+        
+        // 获取当前用户信息
+        const currentUser = await getCurrentUser()
+        if (!currentUser || !currentUser.id) {
+          this.$message.error('获取用户信息失败')
+          return
+        }
+        
+        this.teacherId = currentUser.id
+        
+        // 获取教师课题统计
+        await this.loadTopicStats()
+        
+        // 获取教师学生统计
+        await this.loadStudentStats()
+        
+        // 获取教师课题列表
+        await this.loadTopics()
+        
+        // 获取教师选题列表
+        await this.loadSelections()
+        
+      } catch (error) {
+        console.error('加载数据失败:', error)
+        this.$message.error('加载数据失败')
+      } finally {
+        this.loading = false
+      }
+    },
+    
+    async loadTopicStats() {
+      try {
+        const response = await statsApi.getTeacherTopicStats(this.teacherId)
+        if (response.code === 200 && response.data) {
+          const data = response.data
+          this.metrics = {
+            totalTopics: data.totalTopics || 0,
+            totalStudents: data.totalStudents || 0,
+            avgRating: data.avgRating || 0,
+            completionRate: data.completedTopics && data.totalTopics > 0 
+              ? Math.round((data.completedTopics / data.totalTopics) * 100) 
+              : 0
+          }
+        }
+      } catch (error) {
+        console.error('获取课题统计失败:', error)
+      }
+    },
+    
+    async loadStudentStats() {
+      try {
+        const response = await statsApi.getTeacherStudentStats(this.teacherId)
+        if (response.code === 200 && response.data) {
+          // 这个接口返回统计信息，不需要处理学生列表
+          // 学生列表从selections中获取
+          console.log('学生统计信息:', response.data)
+        }
+      } catch (error) {
+        console.error('获取学生统计失败:', error)
+      }
+    },
+    
+    async loadTopics() {
+      try {
+        const response = await topicApi.getTopicsByTeacher(this.teacherId)
+        if (response.code === 200 && response.data) {
+          this.fullTopics = response.data
+          this.topics = response.data.map(topic => ({
+            id: topic.id,
+            title: topic.title
+          }))
+        }
+      } catch (error) {
+        console.error('获取课题列表失败:', error)
+      }
+    },
+    
+    async loadSelections() {
+      try {
+        const response = await statsApi.getTeacherSelections(this.teacherId)
+        if (response.code === 200 && response.data) {
+          this.selections = response.data
+          
+          // 转换选题数据为topicStats
+          this.processTopicStats()
+          this.processStudentStats()
+        }
+      } catch (error) {
+        console.error('获取选题列表失败:', error)
+      }
+    },
+    
+    processTopicStats() {
+      // 将selections转换为topicStats
+      const topicMap = new Map()
+      
+      // 首先为所有该教师的课题创建stats
+      this.fullTopics.forEach(topic => {
+        topicMap.set(topic.id, {
+          title: topic.title,
+          difficulty: topic.difficulty || 'medium',
+          selectedCount: topic.selectedCount || 0,
+          maxStudents: topic.maxStudents || 0,
+          completionRate: 0,
+          avgProgress: 0,
+          avgRating: topic.rating || 0,
+          viewCount: topic.viewCount || 0,
+          topicId: topic.id
+        })
+      })
+      
+      // 然后计算每个课题的平均进度
+      topicMap.forEach((stats, topicId) => {
+        const selectionsForTopic = this.selections.filter(s => s.topicId === topicId && s.progress !== undefined && s.progress !== null)
+        if (selectionsForTopic.length > 0) {
+          const totalProgress = selectionsForTopic.reduce((sum, s) => sum + (s.progress || 0), 0)
+          stats.avgProgress = Math.round(totalProgress / selectionsForTopic.length)
+        }
+      })
+      
+      this.topicStats = Array.from(topicMap.values())
+    },
+    
+    processStudentStats() {
+      // 将selections转换为studentStats
+      this.studentStats = this.selections.map(selection => ({
+        name: selection.studentName || '未知',
+        studentId: selection.studentNumber || '',
+        topicTitle: selection.topicTitle || this.topics.find(t => t.id === selection.topicId)?.title || '未知',
+        progress: selection.progress || 0,
+        status: selection.status || 'pending',
+        selectedTime: selection.createTime ? selection.createTime.split(' ')[0] : (selection.selectionTime ? selection.selectionTime.split(' ')[0] : ''),
+        lastUpdate: selection.updateTime ? selection.updateTime.split(' ')[0] : '',
+        documentsCount: 0 // 暂时设为0，需要单独获取
+      }))
+    },
+    
+    getDifficultyFromTopic(topicId) {
+      const topic = this.fullTopics.find(t => t.id === topicId)
+      return topic?.difficulty || 'medium'
+    },
+    
     handleDateChange() {
-      this.refreshData();
+      this.refreshData()
     },
     
     handleTopicChange() {
-      this.refreshData();
+      this.refreshData()
     },
     
-    refreshData() {
-      this.$message.success('数据已刷新');
-      this.initCharts();
+    async refreshData() {
+      this.$message.success('数据已刷新')
+      await this.loadTeacherData()
+      this.initCharts()
     },
     
     exportReport() {
-      this.$message.info('报表导出功能开发中...');
+      this.$message.info('报表导出功能开发中...')
     },
     
     exportDetailedData() {
-      this.$message.info('详细数据导出功能开发中...');
+      this.$message.info('详细数据导出功能开发中...')
     },
     
     setTrendPeriod(period) {
-      this.trendPeriod = period;
-      this.initCharts();
+      this.trendPeriod = period
+      this.initCharts()
     },
     
     initCharts() {
@@ -340,8 +423,8 @@ export default {
       // 由于项目中没有安装图表库，这里只是模拟
       this.$nextTick(() => {
         // 模拟图表初始化
-        console.log('初始化图表');
-      });
+        console.log('初始化图表')
+      })
     },
     
     getDifficultyType(difficulty) {
