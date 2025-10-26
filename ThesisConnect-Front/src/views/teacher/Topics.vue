@@ -103,7 +103,11 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="deadline" label="截止时间" width="180"></el-table-column>
+          <el-table-column prop="deadline" label="截止时间" width="180">
+            <template slot-scope="scope">
+              {{ formatDate(scope.row.deadline) }}
+            </template>
+          </el-table-column>
           <el-table-column prop="viewCount" label="浏览量" width="100"></el-table-column>
           <el-table-column prop="rating" label="评分" width="100"></el-table-column>
           <el-table-column label="操作" width="180">
@@ -246,7 +250,7 @@
                 </div>
                 <div class="info-item">
                   <label>截止时间:</label>
-                  <span>{{ selectedTopic.deadline }}</span>
+                  <span>{{ formatDate(selectedTopic.deadline) }}</span>
                 </div>
                 <div class="info-item">
                   <label>浏览量:</label>
@@ -613,6 +617,12 @@ export default {
         'paused': '已暂停'
       };
       return textMap[status] || '未知';
+    },
+    
+    formatDate(dateStr) {
+      if (!dateStr) return '-';
+      // 处理 ISO 格式 2025-10-23T10:49:58 或普通格式 2025-10-23 10:49:58
+      return dateStr.split('T')[0].split(' ')[0];
     }
   }
 }

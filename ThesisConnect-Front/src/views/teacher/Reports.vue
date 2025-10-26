@@ -109,7 +109,14 @@
             </el-button-group>
           </div>
           <div class="chart-content">
-            <div id="trendChart" style="height: 300px;"></div>
+            <v-chart 
+              :option="trendOption" 
+              style="height: 300px;"
+              v-if="trendData.dates && trendData.dates.length > 0"
+            />
+            <div v-else style="height: 300px; display: flex; align-items: center; justify-content: center; color: #999;">
+              暂无数据
+            </div>
           </div>
         </div>
       </el-col>
@@ -121,7 +128,14 @@
             <h3>学生进度分布</h3>
           </div>
           <div class="chart-content">
-            <div id="progressChart" style="height: 300px;"></div>
+            <v-chart 
+              :option="progressOption" 
+              style="height: 300px;"
+              v-if="progressDataArray && progressDataArray.length > 0"
+            />
+            <div v-else style="height: 300px; display: flex; align-items: center; justify-content: center; color: #999;">
+              暂无数据
+            </div>
           </div>
         </div>
       </el-col>
@@ -165,6 +179,11 @@
               </template>
             </el-table-column>
             <el-table-column prop="viewCount" label="浏览量" width="110" align="center"></el-table-column>
+            <el-table-column prop="deadline" label="截止时间" width="120" align="center">
+              <template slot-scope="scope">
+                {{ scope.row.deadline || '-' }}
+              </template>
+            </el-table-column>
           </el-table>
         </el-tab-pane>
         
@@ -238,12 +257,118 @@ export default {
       
       topicStats: [],
       studentStats: [],
-      timeStats: []
+      timeStats: [],
+      
+      // 图表数据
+      trendData: {
+        dates: [],
+        values: []
+      },
+      progressDataArray: []
+    }
+  },
+  computed: {
+    trendOption() {
+      return {
+        title: {
+          text: '课题选择趋势',
+          left: 'center',
+          textStyle: {
+            fontSize: 16
+          }
+        },
+        tooltip: {
+          trigger: 'axis'
+        },
+        legend: {
+          data: ['选择人数'],
+          bottom: 10
+        },
+        xAxis: {
+          type: 'category',
+          data: this.trendData.dates,
+          axisLabel: {
+            interval: 0,
+            rotate: 45
+          }
+        },
+        yAxis: {
+          type: 'value'
+        },
+        series: [
+          {
+            name: '选择人数',
+            type: 'line',
+            smooth: true,
+            data: this.trendData.values,
+            itemStyle: {
+              color: '#667eea'
+            },
+            areaStyle: {
+              color: {
+                type: 'linear',
+                x: 0,
+                y: 0,
+                x2: 0,
+                y2: 1,
+                colorStops: [
+                  { offset: 0, color: 'rgba(102, 126, 234, 0.3)' },
+                  { offset: 1, color: 'rgba(102, 126, 234, 0)' }
+                ]
+              }
+            }
+          }
+        ],
+        grid: {
+          left: '10%',
+          right: '10%',
+          bottom: '20%'
+        }
+      }
+    },
+    
+    progressOption() {
+      return {
+        title: {
+          text: '学生进度分布',
+          left: 'center',
+          textStyle: {
+            fontSize: 16
+          }
+        },
+        tooltip: {
+          trigger: 'item',
+          formatter: '{b}: {c} ({d}%)'
+        },
+        legend: {
+          orient: 'vertical',
+          left: 'left',
+          bottom: 10
+        },
+        series: [
+          {
+            name: '学生人数',
+            type: 'pie',
+            radius: '50%',
+            data: this.progressDataArray,
+            label: {
+              show: true,
+              formatter: '{b}: {c}'
+            },
+            emphasis: {
+              itemStyle: {
+                shadowBlur: 10,
+                shadowOffsetX: 0,
+                shadowColor: 'rgba(0, 0, 0, 0.5)'
+              }
+            }
+          }
+        ]
+      }
     }
   },
   async mounted() {
     await this.loadTeacherData()
-    this.initCharts()
   },
   methods: {
     async loadTeacherData() {
@@ -335,6 +460,9 @@ export default {
           // 转换选题数据为topicStats
           this.processTopicStats()
           this.processStudentStats()
+          
+          // 更新图表数据
+          this.updateChartData()
         }
       } catch (error) {
         console.error('获取选题列表失败:', error)
@@ -356,6 +484,7 @@ export default {
           avgProgress: 0,
           avgRating: topic.rating || 0,
           viewCount: topic.viewCount || 0,
+          deadline: this.formatDate(topic.deadline),
           topicId: topic.id
         })
       })
@@ -372,6 +501,12 @@ export default {
       this.topicStats = Array.from(topicMap.values())
     },
     
+    formatDate(dateStr) {
+      if (!dateStr) return ''
+      // 处理 ISO 格式 2025-10-23T10:49:58 或普通格式 2025-10-23 10:49:58
+      return dateStr.split('T')[0].split(' ')[0]
+    },
+    
     processStudentStats() {
       // 将selections转换为studentStats
       this.studentStats = this.selections.map(selection => ({
@@ -380,8 +515,8 @@ export default {
         topicTitle: selection.topicTitle || this.topics.find(t => t.id === selection.topicId)?.title || '未知',
         progress: selection.progress || 0,
         status: selection.status || 'pending',
-        selectedTime: selection.createTime ? selection.createTime.split(' ')[0] : (selection.selectionTime ? selection.selectionTime.split(' ')[0] : ''),
-        lastUpdate: selection.updateTime ? selection.updateTime.split(' ')[0] : '',
+        selectedTime: this.formatDate(selection.createTime || selection.selectionTime),
+        lastUpdate: this.formatDate(selection.updateTime),
         documentsCount: 0 // 暂时设为0，需要单独获取
       }))
     },
@@ -402,7 +537,6 @@ export default {
     async refreshData() {
       this.$message.success('数据已刷新')
       await this.loadTeacherData()
-      this.initCharts()
     },
     
     exportReport() {
@@ -415,16 +549,86 @@ export default {
     
     setTrendPeriod(period) {
       this.trendPeriod = period
-      this.initCharts()
+      this.updateChartData()
     },
     
-    initCharts() {
-      // 这里应该使用 ECharts 或其他图表库
-      // 由于项目中没有安装图表库，这里只是模拟
-      this.$nextTick(() => {
-        // 模拟图表初始化
-        console.log('初始化图表')
+    updateChartData() {
+      // 更新趋势数据
+      this.updateTrendData()
+      
+      // 更新进度分布数据
+      this.updateProgressData()
+    },
+    
+    updateTrendData() {
+      const dates = []
+      const values = []
+      
+      if (this.selections.length === 0) {
+        // 如果没有数据，生成模拟数据
+        const now = new Date()
+        for (let i = 6; i >= 0; i--) {
+          const date = new Date(now)
+          date.setDate(date.getDate() - i)
+          dates.push(date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }))
+          values.push(Math.floor(Math.random() * 5))
+        }
+      } else {
+        // 统计每月的选择人数（按月统计更直观）
+        const monthMap = new Map()
+        this.selections.forEach(selection => {
+          if (selection.createTime) {
+            const date = new Date(selection.createTime)
+            const year = date.getFullYear()
+            const month = date.getMonth() + 1
+            // 使用 "年-月" 格式，如 "2024-10"
+            const monthKey = `${year}-${String(month).padStart(2, '0')}`
+            monthMap.set(monthKey, (monthMap.get(monthKey) || 0) + 1)
+          }
+        })
+        
+        // 按时间排序
+        const sortedMonths = Array.from(monthMap.entries()).sort((a, b) => a[0].localeCompare(b[0]))
+        
+        sortedMonths.forEach(([monthKey, count]) => {
+          // 将 "2024-10" 格式化为 "2024年10月"
+          const [year, month] = monthKey.split('-')
+          dates.push(`${year}年${parseInt(month)}月`)
+          values.push(count)
+        })
+      }
+      
+      this.trendData = { dates, values }
+      console.log('趋势数据:', this.trendData)
+    },
+    
+    updateProgressData() {
+      // 统计不同进度区间的学生数
+      const progressRanges = [
+        { name: '0-20%', min: 0, max: 20, value: 0 },
+        { name: '21-40%', min: 21, max: 40, value: 0 },
+        { name: '41-60%', min: 41, max: 60, value: 0 },
+        { name: '61-80%', min: 61, max: 80, value: 0 },
+        { name: '81-100%', min: 81, max: 100, value: 0 }
+      ]
+      
+      this.selections.forEach(selection => {
+        if (selection.progress !== undefined && selection.progress !== null) {
+          progressRanges.forEach(range => {
+            if (selection.progress >= range.min && selection.progress <= range.max) {
+              range.value++
+            }
+          })
+        }
       })
+      
+      // 过滤掉数值为0的区间
+      this.progressDataArray = progressRanges.filter(range => range.value > 0).map(range => ({
+        value: range.value,
+        name: range.name
+      }))
+      
+      console.log('进度分布数据:', this.progressDataArray)
     },
     
     getDifficultyType(difficulty) {
