@@ -89,7 +89,7 @@
                 size="small" 
                 @click="viewTopicDetail(topic)"
                 :disabled="topic.selectedCount >= topic.maxStudents">
-                {{ topic.selectedCount >= topic.maxStudents ? '已满员' : '选择课题' }}
+                {{ topic.selectedCount >= topic.maxStudents ? '已满员' : '申请选题' }}
               </el-button>
               <el-button 
                 size="small" 
@@ -151,7 +151,7 @@
           type="primary" 
           @click="selectTopic"
           :disabled="selectedTopic && selectedTopic.selectedCount >= selectedTopic.maxStudents">
-          选择此课题
+          申请此课题
         </el-button>
       </span>
     </el-dialog>
@@ -285,7 +285,7 @@ export default {
     
     async selectTopic() {
       if (this.selectedTopic) {
-        this.$confirm('确定要选择这个课题吗？', '确认选择', {
+        this.$confirm('确定要申请这个课题吗？提交后需要等待老师审核。', '确认申请', {
           confirmButtonText: '确定',
           cancelButtonText: '取消',
           type: 'warning'
@@ -306,11 +306,11 @@ export default {
             const response = await this.$api.selectionApi.selectTopic(selectionData)
             if (response.code === 200) {
               this.detailDialogVisible = false;
-              this.$message.success('选题成功！');
+              this.$message.success('申请成功！请等待老师审核。');
               // 重新加载课题列表
               await this.loadTopics()
             } else {
-              this.$message.error(response.message || '选题失败')
+              this.$message.error(response.message || '申请失败')
             }
           } catch (error) {
             console.error('选题失败:', error)
@@ -394,14 +394,20 @@ export default {
   margin-bottom: 30px;
 }
 
+.topics-list .el-col {
+  display: flex;
+  align-items: stretch;
+}
+
 .topic-card {
+  width: 100%;
+  height: 100%;
   background: white;
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 20px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
-  height: 100%;
   display: flex;
   flex-direction: column;
 }
@@ -425,17 +431,22 @@ export default {
   margin: 0;
   flex: 1;
   margin-right: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .topic-content {
   flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .topic-description {
   color: #606266;
   font-size: 14px;
   line-height: 1.5;
-  margin: 0 0 15px 0;
+  margin: 0 0 10px 0;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
@@ -443,7 +454,7 @@ export default {
 }
 
 .topic-meta {
-  margin-bottom: 15px;
+  margin-bottom: 10px;
 }
 
 .meta-item {
@@ -459,10 +470,19 @@ export default {
   width: 14px;
 }
 
+.meta-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
 .topic-stats {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 15px;
+  margin-bottom: 0;
+  margin-top: auto;
   font-size: 13px;
   color: #909399;
 }
@@ -479,6 +499,7 @@ export default {
 .topic-actions {
   display: flex;
   gap: 10px;
+  margin-top: 10px;
 }
 
 .topic-actions .el-button {

@@ -151,6 +151,11 @@ export const selectionApi = {
     return request.post(`/api/selections/${id}/review`, reviewData)
   },
   
+  // 学生确认申请
+  confirmSelection(id) {
+    return request.post(`/api/selections/${id}/confirm`)
+  },
+  
   // 更新进度
   updateProgress(id, progressData) {
     return request.put(`/api/selections/${id}/progress`, progressData)

@@ -69,9 +69,13 @@
         <el-col :span="6">
           <el-select v-model="statusFilter" placeholder="状态筛选" @change="handleFilter">
             <el-option label="全部状态" value=""></el-option>
+            <el-option label="待审核" value="pending"></el-option>
+            <el-option label="待学生确认" value="approved"></el-option>
+            <el-option label="已确认" value="confirmed"></el-option>
             <el-option label="进行中" value="active"></el-option>
             <el-option label="已完成" value="completed"></el-option>
             <el-option label="已暂停" value="paused"></el-option>
+            <el-option label="已拒绝" value="rejected"></el-option>
           </el-select>
         </el-col>
         <el-col :span="6">
@@ -172,7 +176,7 @@
             <div class="student-info">
               <h3>{{ selectedStudent.real_name }}</h3>
               <p>学号：{{ selectedStudent.student_id }}</p>
-              <p>专业：{{ selectedStudent.major }}</p>
+              <p>专业：{{ selectedStudent.department }}</p>
             </div>
           </div>
           <div class="student-stats">
@@ -207,15 +211,50 @@
               <el-row :gutter="20">
                 <el-col :span="12">
                   <div class="info-item">
+                    <label>申请状态：</label>
+                    <el-tag 
+                      :type="getSelectionStatusType(selectedStudent.selection_status)" 
+                      size="small">
+                      {{ getSelectionStatusText(selectedStudent.selection_status) }}
+                    </el-tag>
+                  </div>
+                </el-col>
+                <el-col :span="12">
+                  <div class="info-item">
                     <label>选择时间：</label>
                     <span>{{ formatDate(selectedStudent.selection_time) }}</span>
                   </div>
                 </el-col>
+              </el-row>
+              <el-row :gutter="20">
                 <el-col :span="12">
                   <div class="info-item">
                     <label>最后更新：</label>
                     <span>{{ formatDate(selectedStudent.update_time) }}</span>
                   </div>
+                </el-col>
+                <el-col :span="12">
+                  <div class="info-item">
+                    <label>进度：</label>
+                    <el-progress 
+                      :percentage="selectedStudent.progress || 0" 
+                      :color="getProgressColor(selectedStudent.progress || 0)"
+                      :stroke-width="6">
+                    </el-progress>
+                  </div>
+                </el-col>
+              </el-row>
+              <el-row v-if="selectedStudent.selection_status === 'approved'" :gutter="20">
+                <el-col :span="24">
+                  <el-alert
+                    title="待学生确认"
+                    type="warning"
+                    :closable="false"
+                    show-icon>
+                    <template slot="title">
+                      <span>该学生的申请已通过审核，等待学生确认选题</span>
+                    </template>
+                  </el-alert>
                 </el-col>
               </el-row>
             </div>
@@ -702,10 +741,12 @@ export default {
     getSelectionStatusType(status) {
       const statusMap = {
         'pending': 'warning',
-        'approved': 'success',
+        'approved': 'warning',
+        'confirmed': 'success',
         'active': 'success',
         'rejected': 'danger',
-        'completed': 'info'
+        'completed': 'info',
+        'paused': 'info'
       };
       return statusMap[status] || 'info';
     },
@@ -713,10 +754,12 @@ export default {
     getSelectionStatusText(status) {
       const statusMap = {
         'pending': '待审核',
-        'approved': '已通过',
+        'approved': '待学生确认',
+        'confirmed': '已确认',
         'active': '进行中',
         'rejected': '已拒绝',
-        'completed': '已完成'
+        'completed': '已完成',
+        'paused': '已暂停'
       };
       return statusMap[status] || '未知';
     },

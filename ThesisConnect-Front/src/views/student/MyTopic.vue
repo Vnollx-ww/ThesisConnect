@@ -55,6 +55,85 @@
       </el-row>
     </div>
     
+    <!-- 我的申请列表 -->
+    <div v-if="applications && applications.length > 0 && !myTopic" class="applications-section">
+      <div class="section-header">
+        <h3>
+          <i class="el-icon-document-add"></i>
+          我的申请
+          <el-tag size="small" :type="getPendingCount() > 0 ? 'warning' : 'success'">
+            {{ applications.length }} 个
+          </el-tag>
+        </h3>
+      </div>
+      
+      <div class="applications-list">
+        <div v-for="app in applications" :key="app.id" class="application-card" :class="getApplicationCardClass(app.status)">
+          <div class="application-header">
+            <div class="application-title-section">
+              <div class="application-icon">
+                <i class="el-icon-folder-opened"></i>
+              </div>
+              <div class="application-title-content">
+                <h4>{{ app.topicTitle }}</h4>
+                <div class="application-meta">
+                  <el-tag 
+                    :type="getApplicationStatusType(app.status)" 
+                    size="mini"
+                    effect="plain">
+                    {{ getApplicationStatusText(app.status) }}
+                  </el-tag>
+                  <span class="teacher-name">
+                    <i class="el-icon-user"></i>
+                    {{ app.teacherName }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="application-body">
+            <div class="application-info-grid">
+              <div class="info-item">
+                <i class="el-icon-time"></i>
+                <div class="info-text">
+                  <div class="info-label">申请时间</div>
+                  <div class="info-value">{{ formatDate(app.createTime) }}</div>
+                </div>
+              </div>
+              <div v-if="app.status === 'approved'" class="info-item">
+                <i class="el-icon-check"></i>
+                <div class="info-text">
+                  <div class="info-label">审核通过时间</div>
+                  <div class="info-value">{{ formatDate(app.updateTime) }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div v-if="app.status === 'approved'" class="application-footer">
+            <div class="approval-notice">
+              <i class="el-icon-info"></i>
+              <span>老师已审核通过，请确认是否选择此课题</span>
+            </div>
+            <div class="application-actions">
+              <el-button 
+                type="success" 
+                icon="el-icon-check"
+                @click="confirmApplication(app)">
+                确认选题
+              </el-button>
+              <el-button 
+                icon="el-icon-close"
+                @click="cancelApplication(app)">
+                取消申请
+              </el-button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
     <!-- 选题详情 -->
     <div v-if="myTopic" class="topic-detail-section">
       <div class="section-header">
@@ -267,7 +346,8 @@ export default {
       // 真实数据
       myTopic: null,
       milestones: [],
-      documents: []
+      documents: [],
+      applications: [] // 我的申请列表
     }
   },
   async mounted() {
@@ -290,49 +370,66 @@ export default {
         // 获取学生的选题信息
         const selectionResponse = await selectionApi.getSelectionsByStudent(userId)
         if (selectionResponse.code === 200 && selectionResponse.data && selectionResponse.data.length > 0) {
-          // 取第一个选题（假设学生只能选一个课题）
-          const selection = selectionResponse.data[0]
+          // 分离已确认的选题（status为confirmed或active）和待处理的申请
+          const confirmedSelections = selectionResponse.data.filter(s => 
+            s.status === 'confirmed' || s.status === 'active' || s.status === 'completed'
+          )
+          const pendingApplications = selectionResponse.data.filter(s => 
+            s.status === 'pending' || s.status === 'approved'
+          )
           
-          // 根据topicId获取课题详情
-          try {
-            const topicResponse = await topicApi.getTopicById(selection.topicId)
-            if (topicResponse.code === 200 && topicResponse.data) {
-              // 合并选题信息和课题详情
-              this.myTopic = {
-                ...topicResponse.data,
-                // 选题相关信息
-                selectionId: selection.id,
-                selectedTime: selection.selectionTime,
-                status: selection.status,
-                progress: selection.progress || 0,
-                progressDescription: selection.progressDescription,
-                problems: selection.problems,
-                finalGrade: selection.finalGrade,
-                studentId: selection.studentId,
-                studentName: selection.studentName,
-                studentNumber: selection.studentNumber,
-                // 确保教师信息正确显示
-                teacherName: selection.teacherName || topicResponse.data.teacherName
+          this.applications = pendingApplications
+          
+          // 如果有已确认的选题，取第一个
+          if (confirmedSelections.length > 0) {
+            const selection = confirmedSelections[0]
+            
+            // 根据topicId获取课题详情
+            try {
+              const topicResponse = await topicApi.getTopicById(selection.topicId)
+              if (topicResponse.code === 200 && topicResponse.data) {
+                // 合并选题信息和课题详情
+                this.myTopic = {
+                  ...topicResponse.data,
+                  // 选题相关信息
+                  selectionId: selection.id,
+                  selectedTime: selection.selectionTime,
+                  status: selection.status,
+                  progress: selection.progress || 0,
+                  progressDescription: selection.progressDescription,
+                  problems: selection.problems,
+                  finalGrade: selection.finalGrade,
+                  studentId: selection.studentId,
+                  studentName: selection.studentName,
+                  studentNumber: selection.studentNumber,
+                  // 确保教师信息正确显示
+                  teacherName: selection.teacherName || topicResponse.data.teacherName
+                }
+                
+                // 获取进度信息
+                await this.loadProgressData()
+                
+                // 获取文档信息
+                await this.loadDocumentsData()
+              } else {
+                this.$message.error('获取课题详情失败')
+                this.myTopic = null
               }
-              
-              // 获取进度信息
-              await this.loadProgressData()
-              
-              // 获取文档信息
-              await this.loadDocumentsData()
-            } else {
+            } catch (error) {
+              console.error('获取课题详情失败:', error)
               this.$message.error('获取课题详情失败')
               this.myTopic = null
             }
-          } catch (error) {
-            console.error('获取课题详情失败:', error)
-            this.$message.error('获取课题详情失败')
+          } else {
             this.myTopic = null
+            this.milestones = []
+            this.documents = []
           }
         } else {
           this.myTopic = null
           this.milestones = []
           this.documents = []
+          this.applications = []
         }
       } catch (error) {
         console.error('加载我的选题数据失败:', error)
@@ -471,6 +568,13 @@ export default {
       }
     },
     
+    // 格式化日期显示（只显示日期，不显示时间）
+    formatDate(dateStr) {
+      if (!dateStr) return '-'
+      // 处理 ISO 格式 2025-10-23T10:49:58 或普通格式 2025-10-23 10:49:58
+      return dateStr.split('T')[0].split(' ')[0]
+    },
+    
     // 格式化时间显示，去掉T字符
     formatDateTime(dateTime) {
       if (!dateTime) return ''
@@ -575,6 +679,88 @@ export default {
       this.$router.push('/layout/student/topics');
     },
     
+    // 获取申请状态文本
+    getApplicationStatusText(status) {
+      const statusMap = {
+        'pending': '待审核',
+        'approved': '审核通过',
+        'rejected': '已拒绝',
+        'confirmed': '已确认'
+      };
+      return statusMap[status] || '未知';
+    },
+    
+    // 获取申请状态类型
+    getApplicationStatusType(status) {
+      const typeMap = {
+        'pending': 'warning',
+        'approved': 'success',
+        'rejected': 'danger',
+        'confirmed': 'success'
+      };
+      return typeMap[status] || 'info';
+    },
+    
+    // 获取申请卡片样式类
+    getApplicationCardClass(status) {
+      if (status === 'approved') return 'application-approved'
+      if (status === 'rejected') return 'application-rejected'
+      return 'application-pending'
+    },
+    
+    // 获取待审核数量
+    getPendingCount() {
+      return this.applications.filter(app => app.status === 'pending').length
+    },
+    
+    // 确认申请（学生确认选题）
+    async confirmApplication(app) {
+      this.$confirm('确定要确认选择这个课题吗？确认后选题将正式开始。', '确认选题', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(async () => {
+        try {
+          // 调用后端接口确认申请
+          const response = await selectionApi.confirmSelection(app.id)
+          if (response.code === 200) {
+            this.$message.success('选题确认成功！')
+            // 重新加载数据
+            await this.loadMyTopicData()
+          } else {
+            this.$message.error(response.message || '确认失败')
+          }
+        } catch (error) {
+          console.error('确认申请失败:', error)
+          this.$message.error('确认失败，请稍后重试')
+        }
+      })
+    },
+    
+    // 拒绝申请（学生拒绝选题）
+    async cancelApplication(app) {
+      this.$confirm('确定要拒绝这个选题吗？拒绝后将无法再选择。', '确认拒绝', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(async () => {
+        try {
+          // 调用后端接口，删除或取消该申请
+          const response = await selectionApi.cancelSelection(app.id)
+          if (response.code === 200) {
+            this.$message.success('已拒绝该选题')
+            // 重新加载数据
+            await this.loadMyTopicData()
+          } else {
+            this.$message.error(response.message || '操作失败')
+          }
+        } catch (error) {
+          console.error('拒绝申请失败:', error)
+          this.$message.error('操作失败，请稍后重试')
+        }
+      })
+    },
+    
     // 处理技术要求格式
     getRequirementsArray(requirements) {
       if (!requirements) return []
@@ -673,10 +859,180 @@ export default {
   font-size: 14px;
 }
 
+.applications-section,
 .topic-detail-section,
 .progress-section,
 .documents-section {
   margin-bottom: 30px;
+}
+
+.applications-list {
+  display: grid;
+  gap: 20px;
+}
+
+.application-card {
+  background: white;
+  border-radius: 12px;
+  border: 2px solid #f0f0f0;
+  padding: 24px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.application-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: #e4e7ed;
+  transition: all 0.3s ease;
+}
+
+.application-approved::before {
+  background: linear-gradient(to bottom, #67C23A, #85ce61);
+  animation: pulse 2s infinite;
+}
+
+.application-pending::before {
+  background: linear-gradient(to bottom, #E6A23C, #f0a020);
+}
+
+.application-rejected::before {
+  background: linear-gradient(to bottom, #F56C6C, #f78989);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.application-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  border-color: #409EFF;
+}
+
+.application-header {
+  margin-bottom: 20px;
+}
+
+.application-title-section {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.application-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.application-icon i {
+  font-size: 24px;
+  color: white;
+}
+
+.application-title-content {
+  flex: 1;
+}
+
+.application-title-content h4 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2c3e50;
+  margin: 0 0 12px 0;
+}
+
+.application-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.teacher-name {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #606266;
+  font-size: 14px;
+}
+
+.application-body {
+  margin-bottom: 20px;
+}
+
+.application-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.info-item i {
+  font-size: 18px;
+  color: #409EFF;
+}
+
+.info-label {
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 4px;
+}
+
+.info-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: #2c3e50;
+}
+
+.application-footer {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 2px solid #f0f0f0;
+}
+
+.approval-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #ecf5ff;
+  border-left: 4px solid #409EFF;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  color: #606266;
+  font-size: 14px;
+}
+
+.approval-notice i {
+  color: #409EFF;
+  font-size: 16px;
+}
+
+.application-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
 }
 
 .section-header {

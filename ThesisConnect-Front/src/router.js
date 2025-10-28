@@ -110,11 +110,6 @@ const router = new VueRouter({
             ]
         },
         
-        // 兼容旧路由（已废弃，保留以便向后兼容）
-        {
-            path: '/layout',
-            redirect: '/login' // 重定向到登录页
-        },
     ]
 });
 

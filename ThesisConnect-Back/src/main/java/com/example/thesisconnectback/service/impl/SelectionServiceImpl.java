@@ -147,6 +147,18 @@ public class SelectionServiceImpl extends ServiceImpl<SelectionMapper, Selection
     }
 
     @Override
+    @Transactional
+    public boolean updateSelectionStatus(Long selectionId, String status) {
+        Selection selection = getById(selectionId);
+        if (selection != null) {
+            selection.setStatus(status);
+            selection.setUpdateTime(LocalDateTime.now());
+            return updateById(selection);
+        }
+        return false;
+    }
+
+    @Override
     public boolean updateProgress(Long selectionId, Integer progress, String description, String problems) {
         Selection selection = getById(selectionId);
         if (selection != null) {

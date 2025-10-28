@@ -198,6 +198,42 @@ public class SelectionController {
     }
 
     /**
+     * 学生确认申请
+     */
+    @PostMapping("/{id}/confirm")
+    public Result<Void> confirmApplication(@PathVariable Long id, HttpServletRequest request) {
+        try {
+            Long userId = (Long) request.getAttribute("userId");
+            
+            Selection selection = selectionService.getById(id);
+            if (selection == null) {
+                return Result.notFound("选题记录不存在");
+            }
+            
+            // 检查权限：只有申请人本人可以确认
+            if (!selection.getStudentId().equals(userId)) {
+                return Result.forbidden("只能确认自己的申请");
+            }
+            
+            // 只有审核通过的申请可以确认
+            if (!"approved".equals(selection.getStatus())) {
+                return Result.error("只能确认已审核通过的申请");
+            }
+            
+            // 将状态从approved改为confirmed
+            boolean success = selectionService.updateSelectionStatus(id, "confirmed");
+            if (success) {
+                return Result.success("确认成功");
+            } else {
+                return Result.error("确认失败");
+            }
+        } catch (Exception e) {
+            log.error("确认申请失败：", e);
+            return Result.error("确认申请失败");
+        }
+    }
+    
+    /**
      * 更新进度
      */
     @PutMapping("/{id}/progress")

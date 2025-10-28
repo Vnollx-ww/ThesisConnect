@@ -47,6 +47,11 @@ public interface SelectionService extends IService<Selection> {
     boolean reviewSelection(Long selectionId, String status, String comment);
 
     /**
+     * 更新选题状态
+     */
+    boolean updateSelectionStatus(Long selectionId, String status);
+
+    /**
      * 更新进度
      */
     boolean updateProgress(Long selectionId, Integer progress, String description, String problems);

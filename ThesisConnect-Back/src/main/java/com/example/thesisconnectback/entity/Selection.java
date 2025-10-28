@@ -69,7 +69,7 @@ public class Selection {
     private LocalDateTime selectionTime;
 
     /**
-     * 状态：pending-待审核，approved-已通过，rejected-已拒绝
+     * 状态：pending-待审核，approved-审核通过（学生需确认），confirmed-已确认（选题成功），rejected-已拒绝，active-进行中，completed-已完成
      */
     @TableField("status")
     private String status;
