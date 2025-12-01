@@ -269,7 +269,7 @@
     </div>
     
     <!-- 无选题状态 -->
-    <div v-else class="no-topic">
+    <div v-else-if="!applications || applications.length === 0" class="no-topic">
       <div class="no-topic-content">
         <i class="el-icon-document-remove"></i>
         <h3>您还没有选择课题</h3>
@@ -375,7 +375,7 @@ export default {
             s.status === 'confirmed' || s.status === 'active' || s.status === 'completed'
           )
           const pendingApplications = selectionResponse.data.filter(s => 
-            s.status === 'pending' || s.status === 'approved'
+            s.status === 'pending' || s.status === 'approved' || s.status === 'rejected'
           )
           
           this.applications = pendingApplications
@@ -676,7 +676,7 @@ export default {
     },
     
     goToTopics() {
-      this.$router.push('/layout/student/topics');
+      this.$router.push('/student/topics');
     },
     
     // 获取申请状态文本

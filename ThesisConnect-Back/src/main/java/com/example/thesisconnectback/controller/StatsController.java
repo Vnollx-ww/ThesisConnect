@@ -218,4 +218,48 @@ public class StatsController {
             return Result.error("获取课题难度分布失败");
         }
     }
+
+    /**
+     * 获取教师指导的学生统计
+     */
+    @GetMapping("/teacher/{teacherId}/student-stats")
+    public Result<Map<String, Object>> getTeacherStudentStats(@PathVariable Long teacherId, HttpServletRequest request) {
+        try {
+            // 检查权限
+            String role = (String) request.getAttribute("role");
+            Long currentUserId = (Long) request.getAttribute("userId");
+            
+            if (!"admin".equals(role) && !currentUserId.equals(teacherId)) {
+                return Result.forbidden("权限不足");
+            }
+
+            Map<String, Object> stats = userService.getStudentStatsByTeacher(teacherId);
+            return Result.success(stats);
+        } catch (Exception e) {
+            log.error("获取教师学生统计失败：", e);
+            return Result.error("获取教师学生统计失败");
+        }
+    }
+
+    /**
+     * 获取教师课题统计
+     */
+    @GetMapping("/teacher/{teacherId}/topic-stats")
+    public Result<Map<String, Object>> getTeacherTopicStats(@PathVariable Long teacherId, HttpServletRequest request) {
+        try {
+            // 检查权限
+            String role = (String) request.getAttribute("role");
+            Long currentUserId = (Long) request.getAttribute("userId");
+            
+            if (!"admin".equals(role) && !currentUserId.equals(teacherId)) {
+                return Result.forbidden("权限不足");
+            }
+
+            Map<String, Object> stats = topicService.getTopicStatsByTeacher(teacherId);
+            return Result.success(stats);
+        } catch (Exception e) {
+            log.error("获取教师课题统计失败：", e);
+            return Result.error("获取教师课题统计失败");
+        }
+    }
 }

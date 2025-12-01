@@ -196,26 +196,40 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     public Map<String, Object> getStudentStatsByTeacher(Long teacherId) {
         Map<String, Object> stats = new HashMap<>();
         
-        // 获取选择该教师课题的学生总数
+        // 获取选择该教师课题的学生总数（Mapper中已过滤掉rejected状态）
         List<Map<String, Object>> students = userMapper.getStudentsByTeacherWithSelection(teacherId);
-        int totalStudents = students.size();
         
-        // 统计活跃学生（状态为active或approved）
+        // 再次过滤，确保不包含rejected状态（双重保险）
+        long validStudentCount = students.stream()
+                .filter(s -> !"rejected".equals(s.get("selection_status")))
+                .count();
+                
+        int totalStudents = (int) validStudentCount;
+        
+        // 统计活跃学生（状态为active或approved或confirmed）
         int activeStudents = 0;
         int completedStudents = 0;
         double totalProgress = 0;
         
         for (Map<String, Object> student : students) {
             String status = (String) student.get("selection_status");
+            
+            // 跳过已拒绝的（虽然理论上不应该有）
+            if ("rejected".equals(status)) {
+                continue;
+            }
+            
             Integer progress = (Integer) student.get("progress");
             
-            if ("active".equals(status) || "approved".equals(status)) {
+            if ("active".equals(status) || "approved".equals(status) || "confirmed".equals(status)) {
                 activeStudents++;
                 if (progress != null) {
                     totalProgress += progress;
                 }
             } else if ("completed".equals(status)) {
                 completedStudents++;
+                // 完成的学生进度算100%
+                totalProgress += 100;
             }
         }
         

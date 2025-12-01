@@ -121,7 +121,16 @@ public class SelectionController {
             if (success) {
                 return Result.success("选题成功");
             } else {
-                return Result.error("选题失败");
+                // 再次检查是否是因为被拒绝
+                try {
+                     // 反射调用mapper检查，或者简单返回通用错误
+                     // 这里简单处理，如果返回false且不是以上原因，可能是被拒绝了
+                     // 更好的方式是在service抛出异常或返回具体错误码，这里暂时通过Result返回通用失败
+                     // 实际上我们可以优化service让它抛出异常
+                     return Result.error("选题失败，您可能已被该课题拒绝或不满足其他条件");
+                } catch (Exception e) {
+                    return Result.error("选题失败");
+                }
             }
         } catch (Exception e) {
             log.error("选择课题失败：", e);
