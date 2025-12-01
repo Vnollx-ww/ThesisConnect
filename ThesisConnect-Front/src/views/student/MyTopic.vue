@@ -231,9 +231,9 @@
 
       <div class="section-header">
         <h3>进度管理</h3>
-        <el-tooltip content="当前有待审核的进度，请等待审核完成后再提交" placement="top" :disabled="!hasPendingReview">
+        <el-tooltip :content="progressTooltip" placement="top" :disabled="!isUpdateDisabled">
           <span style="display: inline-block;">
-            <el-button type="primary" size="small" @click="editProgress()" :disabled="hasPendingReview">更新进度</el-button>
+            <el-button type="primary" size="small" @click="editProgress()" :disabled="isUpdateDisabled">更新进度</el-button>
           </span>
         </el-tooltip>
       </div>
@@ -295,7 +295,7 @@
                   </div>
                   <div v-if="milestone.auditStatus === 'rejected'" style="margin-top: 5px; color: #F56C6C; font-size: 12px;">
                     <div>原因: {{ milestone.rejectReason }}</div>
-                    <el-button type="text" size="mini" @click="editProgress(milestone)">修改并重新提交</el-button>
+                    <el-button type="text" size="mini" @click="editProgress(milestone)" v-if="myTopic.status !== 'completed'">修改并重新提交</el-button>
                   </div>
                 </div>
               </div>
@@ -436,6 +436,18 @@ export default {
       if (!this.milestones || this.milestones.length === 0) return false;
       // 只要有一个状态是pending，就认为有待审核的
       return this.milestones.some(m => m.auditStatus === 'pending');
+    },
+    isUpdateDisabled() {
+      return this.hasPendingReview || (this.myTopic && this.myTopic.status === 'completed');
+    },
+    progressTooltip() {
+      if (this.myTopic && this.myTopic.status === 'completed') {
+        return '课题已结题，不能更新进度';
+      }
+      if (this.hasPendingReview) {
+        return '当前有待审核的进度，请等待审核完成后再提交';
+      }
+      return '';
     }
   },
   async mounted() {

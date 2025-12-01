@@ -3,6 +3,7 @@ package com.example.thesisconnectback.service.impl;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.thesisconnectback.entity.Progress;
 import com.example.thesisconnectback.entity.Selection;
+import com.example.thesisconnectback.exception.BusinessException;
 import com.example.thesisconnectback.mapper.ProgressMapper;
 import com.example.thesisconnectback.service.ProgressService;
 import com.example.thesisconnectback.service.SelectionService;
@@ -36,7 +37,7 @@ public class ProgressServiceImpl extends ServiceImpl<ProgressMapper, Progress> i
             // 但是要注意，updateProgress如果被用来修改已有的（比如updateById），那逻辑不一样。
             // 目前updateProgress实现全是new Progress()然后save。所以这里逻辑是：只要有pending的，就不允许提交新的。
             if (this.count(queryWrapper) > 0) {
-                throw new RuntimeException("当前有待审核的进度记录，请等待审核完成后再提交新的进度");
+                throw new BusinessException("当前有待审核的进度记录，请等待审核完成后再提交新的进度");
             }
 
             // 首先获取选题记录，从中获取topicId
@@ -44,6 +45,11 @@ public class ProgressServiceImpl extends ServiceImpl<ProgressMapper, Progress> i
             if (selection == null) {
                 log.error("选题记录不存在，selectionId: {}", selectionId);
                 return false;
+            }
+
+            // 检查课题是否已结题
+            if ("completed".equals(selection.getStatus())) {
+                throw new BusinessException("课题已结题，无法更新进度");
             }
 
             Progress progress = new Progress();
