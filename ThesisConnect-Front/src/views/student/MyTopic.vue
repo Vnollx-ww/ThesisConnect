@@ -126,7 +126,31 @@
               <el-button 
                 icon="el-icon-close"
                 @click="cancelApplication(app)">
-                取消申请
+                拒绝申请
+              </el-button>
+            </div>
+          </div>
+          
+          <div v-else-if="app.status === 'pending'" class="application-footer">
+            <div class="application-actions" style="width: 100%; justify-content: flex-end;">
+              <el-button 
+                type="danger" 
+                size="small"
+                icon="el-icon-delete"
+                @click="withdrawApplication(app)">
+                撤销申请
+              </el-button>
+            </div>
+          </div>
+          
+          <div v-else-if="app.status === 'rejected'" class="application-footer">
+            <div class="application-actions" style="width: 100%; justify-content: flex-end;">
+              <el-button 
+                type="info" 
+                size="small"
+                icon="el-icon-delete"
+                @click="deleteApplication(app)">
+                删除记录
               </el-button>
             </div>
           </div>
@@ -756,6 +780,58 @@ export default {
           }
         } catch (error) {
           console.error('拒绝申请失败:', error)
+          this.$message.error('操作失败，请稍后重试')
+        }
+      })
+    },
+    
+    // 撤销申请（学生撤销待审核的申请）
+    async withdrawApplication(app) {
+      this.$confirm('确定要撤销这个申请吗？', '确认撤销', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(async () => {
+        try {
+          // 调用后端接口，删除该申请
+          const response = await selectionApi.cancelSelection(app.id)
+          if (response.code === 200) {
+            this.$message.success('申请已撤销')
+            // 重新加载数据
+            await this.loadMyTopicData()
+          } else {
+            this.$message.error(response.message || '操作失败')
+          }
+        } catch (error) {
+          console.error('撤销申请失败:', error)
+          this.$message.error('操作失败，请稍后重试')
+        }
+      })
+    },
+    
+    // 删除记录（删除已拒绝的申请记录）
+    async deleteApplication(app) {
+      this.$confirm('确定要删除这条记录吗？', '确认删除', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(async () => {
+        try {
+          // 调用后端接口，删除该记录
+          // 注意：后端cancelSelection接口目前只允许删除pending状态，需要修改后端支持删除rejected状态
+          // 或者前端不调用后端，只是隐藏显示？不，应该调用后端彻底删除。
+          // 我们需要让后端cancelSelection支持删除rejected状态，或者增加一个新的delete接口
+          // 暂时复用cancelSelection，但需要后端配合修改
+          const response = await selectionApi.cancelSelection(app.id)
+          if (response.code === 200) {
+            this.$message.success('记录已删除')
+            // 重新加载数据
+            await this.loadMyTopicData()
+          } else {
+            this.$message.error(response.message || '操作失败')
+          }
+        } catch (error) {
+          console.error('删除记录失败:', error)
           this.$message.error('操作失败，请稍后重试')
         }
       })

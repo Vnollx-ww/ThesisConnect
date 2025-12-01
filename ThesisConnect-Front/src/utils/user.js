@@ -13,6 +13,21 @@ export async function getCurrentUserId() {
     return userId
   }
   
+  // 尝试从localStorage中的user对象获取
+  try {
+    const userStr = localStorage.getItem('user')
+    if (userStr) {
+      const user = JSON.parse(userStr)
+      if (user && user.id) {
+        userId = user.id
+        localStorage.setItem('userId', userId)
+        return userId
+      }
+    }
+  } catch (e) {
+    // ignore error
+  }
+  
   // 尝试从token中获取用户信息
   const token = localStorage.getItem('token')
   if (token) {

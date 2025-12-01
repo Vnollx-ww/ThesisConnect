@@ -116,14 +116,15 @@ public class SelectionServiceImpl extends ServiceImpl<SelectionMapper, Selection
     @Transactional
     public boolean cancelSelection(Long selectionId) {
         Selection selection = getById(selectionId);
-        if (selection != null && "pending".equals(selection.getStatus())) {
+        // 允许撤销待审核的申请，或删除已拒绝的记录
+        if (selection != null && ("pending".equals(selection.getStatus()) || "rejected".equals(selection.getStatus()))) {
             Long topicId = selection.getTopicId();
             boolean removed = removeById(selectionId);
             
-            // 如果删除成功，更新课题的已选学生数
+            // 如果删除成功，更新课题的已选人数（重新计算已确认的人数）
             if (removed) {
-                int totalSelections = selectionMapper.countByTopicId(topicId);
-                topicMapper.updateSelectedCount(topicId, totalSelections);
+                int confirmedCount = selectionMapper.countConfirmedByTopicId(topicId);
+                topicMapper.updateSelectedCount(topicId, confirmedCount);
             }
             
             return removed;

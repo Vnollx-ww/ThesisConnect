@@ -4,19 +4,30 @@
       <h2 class="page-title">个人信息</h2>
       <p class="page-desc">管理您的个人资料和账户设置</p>
     </div>
-    
+
     <el-row :gutter="20">
       <!-- 左侧：个人信息卡片 -->
       <el-col :span="8">
         <div class="profile-card">
           <div class="profile-header">
             <div class="avatar-section">
-              <el-avatar :size="80" :src="userInfo.avatar">
-                <i class="el-icon-user-solid"></i>
-              </el-avatar>
-              <el-button type="text" @click="changeAvatar" class="change-avatar-btn">
-                更换头像
-              </el-button>
+              <el-upload
+                class="avatar-uploader"
+                action="#"
+                :show-file-list="false"
+                :http-request="uploadAvatar"
+                :before-upload="beforeAvatarUpload">
+                <div class="avatar-wrapper">
+                  <el-avatar :size="80" :src="userInfo.avatar">
+                    <i class="el-icon-user-solid"></i>
+                  </el-avatar>
+                  <div class="avatar-mask">
+                    <i class="el-icon-camera"></i>
+                    <span>更换</span>
+                  </div>
+                </div>
+              </el-upload>
+              <div class="change-avatar-text">点击头像更换</div>
             </div>
             <div class="user-basic-info">
               <h3>{{ userInfo.name }}</h3>
@@ -24,7 +35,7 @@
               <p class="user-major">{{ userInfo.major }}</p>
             </div>
           </div>
-          
+
           <div class="profile-stats">
             <div class="stat-item">
               <span class="stat-number">{{ userInfo.gpa }}</span>
@@ -40,11 +51,11 @@
             </div>
           </div>
         </div>
-        
+
         <!-- 快捷操作 -->
         <div class="quick-actions">
           <h4>快捷操作</h4>
-          <el-button type="primary" @click="editProfile" class="action-btn">
+          <el-button @click="editProfile" class="action-btn">
             <i class="el-icon-edit"></i>
             编辑资料
           </el-button>
@@ -58,7 +69,7 @@
           </el-button>
         </div>
       </el-col>
-      
+
       <!-- 右侧：详细信息 -->
       <el-col :span="16">
         <el-tabs v-model="activeTab" type="card">
@@ -78,7 +89,7 @@
                     </el-form-item>
                   </el-col>
                 </el-row>
-                
+
                 <el-row :gutter="20">
                   <el-col :span="12">
                     <el-form-item label="性别">
@@ -99,7 +110,7 @@
                     </el-form-item>
                   </el-col>
                 </el-row>
-                
+
                 <el-row :gutter="20">
                   <el-col :span="12">
                     <el-form-item label="专业">
@@ -112,22 +123,22 @@
                     </el-form-item>
                   </el-col>
                 </el-row>
-                
+
                 <el-form-item label="联系电话">
                   <el-input v-model="userInfo.phone" :disabled="!isEditing"></el-input>
                 </el-form-item>
-                
+
                 <el-form-item label="邮箱">
                   <el-input v-model="userInfo.email" :disabled="!isEditing"></el-input>
                 </el-form-item>
-                
+
                 <el-form-item label="家庭地址">
                   <el-input v-model="userInfo.address" type="textarea" :disabled="!isEditing"></el-input>
                 </el-form-item>
               </el-form>
             </div>
           </el-tab-pane>
-          
+
           <!-- 学术信息 -->
           <el-tab-pane label="学术信息" name="academic">
             <div class="info-section">
@@ -144,7 +155,7 @@
                     </el-form-item>
                   </el-col>
                 </el-row>
-                
+
                 <el-row :gutter="20">
                   <el-col :span="12">
                     <el-form-item label="当前GPA">
@@ -157,7 +168,7 @@
                     </el-form-item>
                   </el-col>
                 </el-row>
-                
+
                 <el-row :gutter="20">
                   <el-col :span="12">
                     <el-form-item label="专业排名">
@@ -170,20 +181,20 @@
                     </el-form-item>
                   </el-col>
                 </el-row>
-                
+
                 <el-form-item label="获奖情况">
-                  <el-input 
-                    v-model="academicInfo.awards" 
-                    type="textarea" 
+                  <el-input
+                    v-model="academicInfo.awards"
+                    type="textarea"
                     :rows="3"
                     :disabled="!isEditing">
                   </el-input>
                 </el-form-item>
-                
+
                 <el-form-item label="研究兴趣">
-                  <el-input 
-                    v-model="academicInfo.interests" 
-                    type="textarea" 
+                  <el-input
+                    v-model="academicInfo.interests"
+                    type="textarea"
                     :rows="3"
                     :disabled="!isEditing">
                   </el-input>
@@ -191,7 +202,7 @@
               </el-form>
             </div>
           </el-tab-pane>
-          
+
           <!-- 账户设置 -->
           <el-tab-pane label="账户设置" name="account">
             <div class="info-section">
@@ -202,7 +213,7 @@
                 </div>
                 <el-button @click="changePassword">修改</el-button>
               </div>
-              
+
               <div class="setting-item">
                 <div class="setting-content">
                   <h4>邮箱验证</h4>
@@ -210,7 +221,7 @@
                 </div>
                 <el-button @click="verifyEmail">验证</el-button>
               </div>
-              
+
               <div class="setting-item">
                 <div class="setting-content">
                   <h4>手机验证</h4>
@@ -218,7 +229,7 @@
                 </div>
                 <el-button @click="verifyPhone">验证</el-button>
               </div>
-              
+
               <div class="setting-item">
                 <div class="setting-content">
                   <h4>数据导出</h4>
@@ -229,7 +240,7 @@
             </div>
           </el-tab-pane>
         </el-tabs>
-        
+
         <!-- 操作按钮 -->
         <div class="form-actions" v-if="isEditing">
           <el-button @click="cancelEdit">取消</el-button>
@@ -237,7 +248,7 @@
         </div>
       </el-col>
     </el-row>
-    
+
     <!-- 修改密码对话框 -->
     <el-dialog
       title="修改密码"
@@ -263,7 +274,7 @@
 </template>
 
 <script>
-import { authApi, userApi } from '@/api'
+import { authApi, userApi, fileApi } from '@/api'
 
 export default {
   name: 'StudentProfile',
@@ -272,13 +283,13 @@ export default {
       activeTab: 'basic',
       isEditing: false,
       passwordDialogVisible: false,
-      
+
       passwordForm: {
         currentPassword: '',
         newPassword: '',
         confirmPassword: ''
       },
-      
+
       passwordRules: {
         currentPassword: [
           { required: true, message: '请输入当前密码', trigger: 'blur' }
@@ -292,7 +303,7 @@ export default {
           { validator: this.validateConfirmPassword, trigger: 'blur' }
         ]
       },
-      
+
       // 用户基本信息
       userInfo: {
         name: '',
@@ -309,7 +320,7 @@ export default {
         credits: '',
         rank: ''
       },
-      
+
       // 学术信息
       academicInfo: {
         enrollmentYear: '',
@@ -349,7 +360,7 @@ export default {
             credits: userData.credits || '',
             rank: userData.rank || ''
           }
-          
+
           // 更新学术信息
           this.academicInfo = {
             enrollmentYear: userData.enrollmentYear || '',
@@ -376,16 +387,16 @@ export default {
         callback();
       }
     },
-    
+
     editProfile() {
       this.isEditing = true;
     },
-    
+
     cancelEdit() {
       this.isEditing = false;
       this.$message.info('已取消编辑');
     },
-    
+
     async saveProfile() {
       try {
         // 准备更新数据
@@ -398,12 +409,12 @@ export default {
           address: this.userInfo.address,
           className: this.userInfo.class
         };
-        
+
         const response = await authApi.updateUserInfo(updateData);
         if (response.code === 200) {
           this.isEditing = false;
           this.$message.success('个人信息保存成功！');
-          
+
           // 重新加载用户信息以确保数据同步
           await this.loadUserInfo();
         } else {
@@ -414,19 +425,19 @@ export default {
         this.$message.error('保存个人信息失败，请稍后重试');
       }
     },
-    
+
     // 格式化生日日期
     formatBirthday(birthday) {
       if (!birthday) return '';
-      
+
       // 确保birthday是字符串类型
       const birthdayStr = String(birthday);
-      
+
       // 如果是ISO格式的日期时间字符串，只提取日期部分
       if (birthdayStr.includes('T') && !birthdayStr.includes('GMT')) {
         return birthdayStr.split('T')[0];
       }
-      
+
       // 如果是Date对象的字符串表示，转换为YYYY-MM-DD格式
       if (birthdayStr.includes('GMT') || birthdayStr.includes('GM')) {
         try {
@@ -441,12 +452,12 @@ export default {
           console.warn('日期解析失败:', e);
         }
       }
-      
+
       // 如果已经是YYYY-MM-DD格式，直接返回
       if (/^\d{4}-\d{2}-\d{2}$/.test(birthdayStr)) {
         return birthdayStr;
       }
-      
+
       // 其他情况，尝试解析为日期
       try {
         const date = new Date(birthdayStr);
@@ -459,15 +470,56 @@ export default {
       } catch (e) {
         console.warn('日期解析失败:', e);
       }
-      
+
       // 如果无法解析，返回空字符串
       return '';
     },
-    
-    changeAvatar() {
-      this.$message.info('头像上传功能开发中...');
+
+    async uploadAvatar(params) {
+      try {
+        const file = params.file
+        const response = await fileApi.uploadFile(file)
+
+        if (response.code === 200) {
+          const avatarUrl = response.data
+          this.userInfo.avatar = avatarUrl
+
+          // 立即更新用户信息中的头像
+          const updateData = {
+            avatar: avatarUrl
+          }
+
+          const updateResponse = await authApi.updateUserInfo(updateData)
+          if (updateResponse.code === 200) {
+            this.$message.success('头像更换成功')
+          } else {
+            this.$message.warning('头像上传成功但保存失败')
+          }
+        } else {
+          this.$message.error(response.message || '头像上传失败')
+        }
+      } catch (error) {
+        console.error('头像上传异常:', error)
+        this.$message.error('头像上传失败，请稍后重试')
+      }
     },
-    
+
+    beforeAvatarUpload(file) {
+      const isJPG = file.type === 'image/jpeg';
+      const isPNG = file.type === 'image/png';
+      const isLt2M = file.size / 1024 / 1024 < 2;
+
+      if (!isJPG && !isPNG) {
+        this.$message.error('上传头像图片只能是 JPG 或 PNG 格式!');
+        return false;
+      }
+      if (!isLt2M) {
+        this.$message.error('上传头像图片大小不能超过 2MB!');
+        return false;
+      }
+      return true;
+    },
+
     changePassword() {
       this.passwordForm = {
         currentPassword: '',
@@ -476,7 +528,7 @@ export default {
       };
       this.passwordDialogVisible = true;
     },
-    
+
     submitPassword() {
       this.$refs.passwordForm.validate((valid) => {
         if (valid) {
@@ -485,15 +537,15 @@ export default {
         }
       });
     },
-    
+
     verifyEmail() {
       this.$message.info('邮箱验证功能开发中...');
     },
-    
+
     verifyPhone() {
       this.$message.info('手机验证功能开发中...');
     },
-    
+
     exportData() {
       this.$message.info('数据导出功能开发中...');
     }
@@ -541,6 +593,49 @@ export default {
 .avatar-section {
   text-align: center;
   margin-right: 20px;
+}
+
+.avatar-wrapper {
+  position: relative;
+  cursor: pointer;
+  border-radius: 50%;
+  overflow: hidden;
+  display: inline-block;
+}
+
+.avatar-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.avatar-wrapper:hover .avatar-mask {
+  opacity: 1;
+}
+
+.avatar-mask i {
+  font-size: 20px;
+  margin-bottom: 5px;
+}
+
+.avatar-mask span {
+  font-size: 12px;
+}
+
+.change-avatar-text {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #909399;
 }
 
 .change-avatar-btn {
@@ -660,22 +755,22 @@ export default {
     flex-direction: column;
     text-align: center;
   }
-  
+
   .avatar-section {
     margin-right: 0;
     margin-bottom: 15px;
   }
-  
+
   .profile-stats {
     flex-direction: column;
     gap: 10px;
   }
-  
+
   .setting-item {
     flex-direction: column;
     align-items: flex-start;
   }
-  
+
   .setting-item .el-button {
     margin-top: 10px;
   }

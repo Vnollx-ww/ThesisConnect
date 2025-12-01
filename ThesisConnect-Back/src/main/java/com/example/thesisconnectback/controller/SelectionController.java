@@ -158,16 +158,16 @@ public class SelectionController {
                 return Result.forbidden("权限不足");
             }
 
-            // 只有待审核状态可以取消
-            if (!"pending".equals(selection.getStatus())) {
-                return Result.error("只有待审核状态的选题可以取消");
+            // 只有待审核或已拒绝状态可以取消/删除
+            if (!"pending".equals(selection.getStatus()) && !"rejected".equals(selection.getStatus())) {
+                return Result.error("只有待审核或已拒绝状态的选题可以取消或删除");
             }
 
             boolean success = selectionService.cancelSelection(id);
             if (success) {
-                return Result.success("取消选题成功");
+                return Result.success("操作成功");
             } else {
-                return Result.error("取消选题失败");
+                return Result.error("操作失败");
             }
         } catch (Exception e) {
             log.error("取消选题失败：", e);

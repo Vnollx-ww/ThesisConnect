@@ -284,6 +284,20 @@ export const progressApi = {
   }
 }
 
+// 文件相关API
+export const fileApi = {
+  // 上传文件
+  uploadFile(file) {
+    const formData = new FormData()
+    formData.append('file', file)
+    return request.post('/api/file/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+  }
+}
+
 // 认证相关API
 export const authApi = {
   // 登录
