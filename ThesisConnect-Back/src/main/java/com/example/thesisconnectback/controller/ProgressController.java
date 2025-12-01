@@ -43,8 +43,9 @@ public class ProgressController {
             Integer percentage = Integer.valueOf(progressForm.get("percentage").toString());
             String description = (String) progressForm.get("description");
             String problems = (String) progressForm.get("problems");
+            String reportUrl = (String) progressForm.get("reportUrl");
 
-            boolean success = progressService.updateProgress(selectionId, milestoneTitle, milestoneStatus, percentage, description, problems, userId, username);
+            boolean success = progressService.updateProgress(selectionId, milestoneTitle, milestoneStatus, percentage, description, problems, reportUrl, userId, username);
             if (success) {
                 return Result.success("进度更新成功");
             } else {
@@ -53,6 +54,34 @@ public class ProgressController {
         } catch (Exception e) {
             log.error("更新进度失败：", e);
             return Result.error("更新进度失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 审核进度
+     */
+    @PostMapping("/review")
+    public Result<Void> reviewProgress(@RequestBody Map<String, Object> reviewForm, HttpServletRequest request) {
+        try {
+            // 检查权限（只有教师和管理员可以审核进度）
+            String role = (String) request.getAttribute("role");
+            if (!"teacher".equals(role) && !"admin".equals(role)) {
+                return Result.forbidden("权限不足");
+            }
+
+            Long id = Long.valueOf(reviewForm.get("id").toString());
+            String status = (String) reviewForm.get("status");
+            String rejectReason = (String) reviewForm.get("rejectReason");
+
+            boolean success = progressService.reviewProgress(id, status, rejectReason);
+            if (success) {
+                return Result.success("审核成功");
+            } else {
+                return Result.error("审核失败");
+            }
+        } catch (Exception e) {
+            log.error("审核进度失败：", e);
+            return Result.error("审核失败：" + e.getMessage());
         }
     }
 

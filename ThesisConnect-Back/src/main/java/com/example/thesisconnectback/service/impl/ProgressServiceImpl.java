@@ -25,8 +25,20 @@ public class ProgressServiceImpl extends ServiceImpl<ProgressMapper, Progress> i
     private SelectionService selectionService;
 
     @Override
-    public boolean updateProgress(Long selectionId, String milestoneTitle, String milestoneStatus, Integer percentage, String description, String problems, Long studentId, String studentName) {
+    public boolean updateProgress(Long selectionId, String milestoneTitle, String milestoneStatus, Integer percentage, String description, String problems, String reportUrl, Long studentId, String studentName) {
         try {
+            // 检查是否有待审核的进度记录
+            com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Progress> queryWrapper = new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
+            queryWrapper.eq("selection_id", selectionId);
+            queryWrapper.eq("status", "pending");
+            
+            // 如果存在待审核记录，并且不是在修改（这里updateProgress每次都新增，所以如果是修改被拒绝的，旧的已经是rejected了，不会查出来；如果是pending的，就查出来了）
+            // 但是要注意，updateProgress如果被用来修改已有的（比如updateById），那逻辑不一样。
+            // 目前updateProgress实现全是new Progress()然后save。所以这里逻辑是：只要有pending的，就不允许提交新的。
+            if (this.count(queryWrapper) > 0) {
+                throw new RuntimeException("当前有待审核的进度记录，请等待审核完成后再提交新的进度");
+            }
+
             // 首先获取选题记录，从中获取topicId
             Selection selection = selectionService.getById(selectionId);
             if (selection == null) {
@@ -42,6 +54,8 @@ public class ProgressServiceImpl extends ServiceImpl<ProgressMapper, Progress> i
             progress.setPercentage(percentage);
             progress.setDescription(description);
             progress.setProblems(problems);
+            progress.setReportUrl(reportUrl);
+            progress.setStatus("pending"); // 默认为待审核
             
             // 设置里程碑信息
             progress.setMilestoneTitle(milestoneTitle != null && !milestoneTitle.trim().isEmpty() ? milestoneTitle : "进度更新");
@@ -75,6 +89,31 @@ public class ProgressServiceImpl extends ServiceImpl<ProgressMapper, Progress> i
             return progressSaved;
         } catch (Exception e) {
             log.error("更新进度失败：", e);
+            return false;
+        }
+    }
+
+    @Override
+    public boolean reviewProgress(Long id, String status, String rejectReason) {
+        try {
+            Progress progress = this.getById(id);
+            if (progress == null) {
+                log.error("进度记录不存在，id: {}", id);
+                return false;
+            }
+            
+            progress.setStatus(status);
+            if ("rejected".equals(status)) {
+                progress.setRejectReason(rejectReason);
+            } else if ("approved".equals(status)) {
+                progress.setRejectReason(null); // 如果通过，清除拒绝原因
+            }
+            
+            progress.setUpdateTime(LocalDateTime.now());
+            
+            return this.updateById(progress);
+        } catch (Exception e) {
+            log.error("审核进度失败：", e);
             return false;
         }
     }

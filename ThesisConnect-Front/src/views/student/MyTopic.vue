@@ -211,7 +211,11 @@
     <div v-if="myTopic" class="progress-section">
       <div class="section-header">
         <h3>进度管理</h3>
-        <el-button type="primary" size="small" @click="editProgress">更新进度</el-button>
+        <el-tooltip content="当前有待审核的进度，请等待审核完成后再提交" placement="top" :disabled="!hasPendingReview">
+          <span style="display: inline-block;">
+            <el-button type="primary" size="small" @click="editProgress()" :disabled="hasPendingReview">更新进度</el-button>
+          </span>
+        </el-tooltip>
       </div>
       
       <div class="progress-card">
@@ -254,6 +258,23 @@
                     {{ getStatusText(milestone.status) }}
                   </el-tag>
                   <span class="progress-text">进度: {{ milestone.percentage }}%</span>
+                  <div style="margin-top: 5px;">
+                    <el-tag 
+                      size="mini" 
+                      effect="dark"
+                      :type="milestone.auditStatus === 'approved' ? 'success' : milestone.auditStatus === 'rejected' ? 'danger' : 'warning'">
+                      {{ milestone.auditStatus === 'approved' ? '审核通过' : milestone.auditStatus === 'rejected' ? '审核未通过' : '待审核' }}
+                    </el-tag>
+                    <span v-if="milestone.reportUrl" style="margin-left: 10px;">
+                      <a :href="milestone.reportUrl" target="_blank" style="color: #409EFF; text-decoration: none;">
+                        <i class="el-icon-document"></i> 查看报告
+                      </a>
+                    </span>
+                  </div>
+                  <div v-if="milestone.auditStatus === 'rejected'" style="margin-top: 5px; color: #F56C6C; font-size: 12px;">
+                    <div>原因: {{ milestone.rejectReason }}</div>
+                    <el-button type="text" size="mini" @click="editProgress(milestone)">修改并重新提交</el-button>
+                  </div>
                 </div>
               </div>
             </el-timeline-item>
@@ -324,6 +345,17 @@
         <el-form-item label="当前进度">
           <el-slider v-model="progressForm.percentage" :min="0" :max="100"></el-slider>
         </el-form-item>
+        <el-form-item label="报告文档">
+          <el-upload
+            action="#"
+            :http-request="handleUpload"
+            :file-list="fileList"
+            :limit="1"
+            :on-remove="handleRemove">
+            <el-button size="small" type="primary">点击上传</el-button>
+            <div slot="tip" class="el-upload__tip">只能上传docx/pdf文件，每个进度需单独上传</div>
+          </el-upload>
+        </el-form-item>
         <el-form-item label="进度说明">
           <el-input
             v-model="progressForm.description"
@@ -350,7 +382,7 @@
 </template>
 
 <script>
-import { selectionApi, progressApi, documentApi, topicApi } from '@/api'
+import { selectionApi, progressApi, documentApi, topicApi, fileApi } from '@/api'
 import { getCurrentUserId } from '@/utils/user'
 
 export default {
@@ -364,14 +396,24 @@ export default {
         milestoneStatus: 'current',
         percentage: 0,
         description: '',
-        problems: ''
+        problems: '',
+        reportUrl: ''
       },
+      fileList: [],
       
       // 真实数据
       myTopic: null,
       milestones: [],
       documents: [],
       applications: [] // 我的申请列表
+    }
+  },
+  computed: {
+    // 检查是否有待审核的进度
+    hasPendingReview() {
+      if (!this.milestones || this.milestones.length === 0) return false;
+      // 只要有一个状态是pending，就认为有待审核的
+      return this.milestones.some(m => m.auditStatus === 'pending');
     }
   },
   async mounted() {
@@ -484,7 +526,11 @@ export default {
               id: item.id,
               title: item.milestoneTitle || '进度更新', // 为没有标题的记录提供默认标题
               description: item.milestoneDescription || item.description || '',
+              problems: item.problems,
               status: item.milestoneStatus || 'pending',
+              auditStatus: item.status || 'pending',
+              rejectReason: item.rejectReason,
+              reportUrl: item.reportUrl,
               date: item.milestoneDate || item.createTime,
               percentage: item.percentage
             }))
@@ -493,6 +539,41 @@ export default {
       } catch (error) {
         console.error('加载进度数据失败:', error)
       }
+    },
+
+    // 文件上传处理
+    async handleUpload(options) {
+      try {
+        const { file } = options
+        // 检查文件类型
+        const isDoc = file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || 
+                      file.type === 'application/pdf' || 
+                      file.name.endsWith('.docx') || 
+                      file.name.endsWith('.pdf')
+        
+        if (!isDoc) {
+          this.$message.error('只能上传 docx 或 pdf 格式的文件!')
+          return
+        }
+
+        const response = await fileApi.uploadFile(file)
+        if (response.code === 200) {
+          this.progressForm.reportUrl = response.data
+          this.$message.success('文件上传成功')
+        } else {
+          this.$message.error('文件上传失败')
+          this.fileList = []
+        }
+      } catch (error) {
+        console.error('文件上传出错:', error)
+        this.$message.error('文件上传出错')
+        this.fileList = []
+      }
+    },
+
+    handleRemove() {
+      this.progressForm.reportUrl = ''
+      this.fileList = []
     },
     
     // 加载文档数据
@@ -615,10 +696,22 @@ export default {
       return statusMap[status] || '未知';
     },
     
-    editProgress() {
-      this.progressForm.percentage = this.myTopic.progress;
-      this.progressForm.description = '';
-      this.progressForm.problems = '';
+    editProgress(milestone) {
+      if (milestone && milestone.id) {
+        this.progressForm.milestoneTitle = milestone.title;
+        this.progressForm.milestoneStatus = milestone.status;
+        this.progressForm.percentage = milestone.percentage;
+        this.progressForm.description = milestone.description;
+        this.progressForm.problems = milestone.problems;
+        this.progressForm.reportUrl = ''; // 重置文件，要求重新上传
+        this.fileList = [];
+      } else {
+        this.progressForm.percentage = this.myTopic.progress;
+        this.progressForm.description = '';
+        this.progressForm.problems = '';
+        this.progressForm.reportUrl = '';
+        this.fileList = [];
+      }
       this.progressDialogVisible = true;
     },
     
@@ -630,7 +723,8 @@ export default {
           milestoneStatus: this.progressForm.milestoneStatus,
           percentage: this.progressForm.percentage,
           description: this.progressForm.description,
-          problems: this.progressForm.problems
+          problems: this.progressForm.problems,
+          reportUrl: this.progressForm.reportUrl
         }
         
         const response = await progressApi.updateProgress(progressData)

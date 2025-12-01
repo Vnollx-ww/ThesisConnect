@@ -248,6 +248,11 @@ export const progressApi = {
     return request.post('/api/progress/update', progressData)
   },
   
+  // 审核进度
+  reviewProgress(reviewData) {
+    return request.post('/api/progress/review', reviewData)
+  },
+  
   // 添加里程碑
   addMilestone(milestoneData) {
     return request.post('/api/progress/milestone', milestoneData)
