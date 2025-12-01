@@ -283,6 +283,37 @@ public class SelectionController {
     }
 
     /**
+     * 评价打分
+     */
+    @PostMapping("/{id}/grade")
+    public Result<Void> gradeSelection(@PathVariable Long id, @RequestBody Map<String, String> gradeForm, HttpServletRequest request) {
+        try {
+            // 检查权限（只有教师可以打分）
+            String role = (String) request.getAttribute("role");
+            if (!"teacher".equals(role)) {
+                return Result.forbidden("权限不足");
+            }
+
+            String grade = gradeForm.get("grade");
+            String evaluation = gradeForm.get("evaluation");
+
+            if (grade == null || grade.isEmpty()) {
+                return Result.badRequest("成绩不能为空");
+            }
+
+            boolean success = selectionService.gradeSelection(id, grade, evaluation);
+            if (success) {
+                return Result.success("评价打分成功");
+            } else {
+                return Result.error("评价打分失败");
+            }
+        } catch (Exception e) {
+            log.error("评价打分失败：", e);
+            return Result.error("评价打分失败");
+        }
+    }
+
+    /**
      * 根据学生ID获取选题记录
      */
     @GetMapping("/student/{studentId}")

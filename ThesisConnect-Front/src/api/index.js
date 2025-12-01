@@ -151,6 +151,11 @@ export const selectionApi = {
     return request.post(`/api/selections/${id}/review`, reviewData)
   },
   
+  // 评价打分
+  gradeSelection(id, gradeData) {
+    return request.post(`/api/selections/${id}/grade`, gradeData)
+  },
+  
   // 学生确认申请
   confirmSelection(id) {
     return request.post(`/api/selections/${id}/confirm`)

@@ -155,13 +155,52 @@
               </el-button>
               <el-button type="text" size="small" @click="viewStudentDetail(scope.row)" style="margin-right: 5px;">详情</el-button>
               <el-button type="text" size="small" @click="sendMessage(scope.row)" style="margin-right: 5px;">消息</el-button>
-              <el-button type="text" size="small" @click="evaluateStudent(scope.row)">评价</el-button>
+              <el-button 
+                v-if="scope.row.selection_status === 'completed'"
+                type="text" 
+                size="small" 
+                @click="handleGrade(scope.row)">
+                评分
+              </el-button>
             </template>
           </el-table-column>
         </el-table>
       </div>
     </div>
     
+    <!-- 评分对话框 -->
+    <el-dialog
+      title="学生评分"
+      :visible.sync="gradeDialogVisible"
+      width="500px">
+      <el-form :model="gradeForm" label-width="100px">
+        <el-form-item label="学生姓名">
+          <el-input v-model="gradeForm.studentName" disabled></el-input>
+        </el-form-item>
+        <el-form-item label="最终成绩">
+          <el-select v-model="gradeForm.grade" placeholder="请选择成绩等级">
+            <el-option label="优秀 (A)" value="A"></el-option>
+            <el-option label="良好 (B)" value="B"></el-option>
+            <el-option label="中等 (C)" value="C"></el-option>
+            <el-option label="及格 (D)" value="D"></el-option>
+            <el-option label="不及格 (F)" value="F"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="教师评价">
+          <el-input
+            v-model="gradeForm.evaluation"
+            type="textarea"
+            :rows="4"
+            placeholder="请输入对学生毕设工作的详细评价">
+          </el-input>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="gradeDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitGrade">提交评分</el-button>
+      </span>
+    </el-dialog>
+
     <!-- 学生详情对话框 -->
     <el-dialog
       title="学生详情"
@@ -558,6 +597,15 @@ export default {
         rejectReason: ''
       },
       
+      // 评分相关
+      gradeDialogVisible: false,
+      currentGradeStudent: null,
+      gradeForm: {
+        studentName: '',
+        grade: '',
+        evaluation: ''
+      },
+      
       messageForm: {
         receiver: '',
         content: ''
@@ -709,6 +757,47 @@ export default {
     submitEvaluation() {
       this.evaluateDialogVisible = false;
       this.$message.success('评价提交成功！');
+    },
+    
+    // 处理评分
+    handleGrade(student) {
+      this.currentGradeStudent = student;
+      this.gradeForm.studentName = student.real_name;
+      // 如果已有成绩，回显
+      this.gradeForm.grade = student.final_grade || '';
+      // 注意：后端返回的Map可能没有teacher_evaluation字段，如果有的话可以在这里回显
+      // 目前后端getStudentsByTeacherWithSelection没有显式查出teacher_evaluation，可以后续补充
+      this.gradeForm.evaluation = ''; 
+      this.gradeDialogVisible = true;
+    },
+    
+    // 提交评分
+    async submitGrade() {
+      if (!this.gradeForm.grade) {
+        this.$message.warning('请选择最终成绩');
+        return;
+      }
+      
+      try {
+        const gradeData = {
+          grade: this.gradeForm.grade,
+          evaluation: this.gradeForm.evaluation
+        };
+        
+        const response = await selectionApi.gradeSelection(this.currentGradeStudent.selection_id, gradeData);
+        if (response.code === 200) {
+          this.$message.success('评分提交成功！');
+          this.gradeDialogVisible = false;
+          // 刷新列表
+          await this.loadStudents();
+          await this.loadStats();
+        } else {
+          this.$message.error(response.message || '评分提交失败');
+        }
+      } catch (error) {
+        console.error('评分提交失败:', error);
+        this.$message.error('评分提交失败，请稍后重试');
+      }
     },
     
     async reviewSelection(student, status) {

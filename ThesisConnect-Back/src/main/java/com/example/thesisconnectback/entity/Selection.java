@@ -99,6 +99,12 @@ public class Selection {
     private String finalGrade;
 
     /**
+     * 教师评价
+     */
+    @TableField("teacher_evaluation")
+    private String teacherEvaluation;
+
+    /**
      * 创建时间
      */
     @TableField(value = "create_time", fill = FieldFill.INSERT)

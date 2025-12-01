@@ -161,7 +161,15 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     
     @Override
     public List<Map<String, Object>> getStudentsByTeacherWithSelection(Long teacherId) {
-        return userMapper.getStudentsByTeacherWithSelection(teacherId);
+        List<Map<String, Object>> students = userMapper.getStudentsByTeacherWithSelection(teacherId);
+        if (students != null) {
+            for (Map<String, Object> student : students) {
+                if (!student.containsKey("avatar")) {
+                    student.put("avatar", null);
+                }
+            }
+        }
+        return students;
     }
     
     @Override

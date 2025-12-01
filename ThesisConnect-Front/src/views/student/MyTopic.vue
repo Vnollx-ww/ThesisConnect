@@ -209,6 +209,26 @@
     
     <!-- 进度管理 -->
     <div v-if="myTopic" class="progress-section">
+      <!-- 结题评价展示 -->
+      <div v-if="myTopic.status === 'completed' && myTopic.finalGrade" class="completion-card" style="margin-bottom: 20px; background: #f0f9eb; border: 1px solid #e1f3d8; padding: 20px; border-radius: 4px;">
+        <div style="display: flex; align-items: center; margin-bottom: 15px;">
+          <i class="el-icon-s-claim" style="color: #67C23A; font-size: 24px; margin-right: 10px;"></i>
+          <h3 style="margin: 0; color: #67C23A;">恭喜！您的课题已结题</h3>
+        </div>
+        <div class="grade-info" style="display: flex; margin-bottom: 15px;">
+          <div style="margin-right: 30px;">
+            <span style="color: #606266; font-weight: bold;">最终成绩：</span>
+            <span style="font-size: 20px; color: #F56C6C; font-weight: bold;">{{ myTopic.finalGrade }}</span>
+          </div>
+        </div>
+        <div v-if="myTopic.teacherEvaluation" class="evaluation-info">
+          <div style="color: #606266; font-weight: bold; margin-bottom: 5px;">教师评价：</div>
+          <div style="color: #606266; line-height: 1.6; background: #fff; padding: 10px; border-radius: 4px;">
+            {{ myTopic.teacherEvaluation }}
+          </div>
+        </div>
+      </div>
+
       <div class="section-header">
         <h3>进度管理</h3>
         <el-tooltip content="当前有待审核的进度，请等待审核完成后再提交" placement="top" :disabled="!hasPendingReview">
@@ -237,7 +257,10 @@
               :type="milestone.status === 'completed' ? 'success' : milestone.status === 'current' ? 'primary' : 'info'">
               <div class="milestone-content">
                 <div class="milestone-header">
-                  <h4>{{ milestone.title }}</h4>
+                  <h4 style="display: flex; align-items: center;">
+                    {{ milestone.title }}
+                    <el-tag size="mini" type="info" style="margin-left: 10px; font-weight: normal;">进度: {{ milestone.percentage }}%</el-tag>
+                  </h4>
                   <div class="milestone-actions">
                     <el-select 
                       v-model="milestone.status" 
@@ -257,7 +280,6 @@
                     size="small">
                     {{ getStatusText(milestone.status) }}
                   </el-tag>
-                  <span class="progress-text">进度: {{ milestone.percentage }}%</span>
                   <div style="margin-top: 5px;">
                     <el-tag 
                       size="mini" 
@@ -465,6 +487,7 @@ export default {
                   progressDescription: selection.progressDescription,
                   problems: selection.problems,
                   finalGrade: selection.finalGrade,
+                  teacherEvaluation: selection.teacherEvaluation,
                   studentId: selection.studentId,
                   studentName: selection.studentName,
                   studentNumber: selection.studentNumber,

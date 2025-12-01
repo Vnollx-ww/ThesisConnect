@@ -190,6 +190,19 @@ public class SelectionServiceImpl extends ServiceImpl<SelectionMapper, Selection
     }
 
     @Override
+    public boolean gradeSelection(Long selectionId, String grade, String evaluation) {
+        Selection selection = getById(selectionId);
+        if (selection != null) {
+            selection.setFinalGrade(grade);
+            selection.setTeacherEvaluation(evaluation);
+            selection.setStatus("completed"); // 确保状态为已完成
+            selection.setUpdateTime(LocalDateTime.now());
+            return updateById(selection);
+        }
+        return false;
+    }
+
+    @Override
     public boolean hasSelectedTopic(Long studentId) {
         return selectionMapper.countByStudentId(studentId) > 0;
     }

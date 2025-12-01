@@ -107,6 +107,19 @@ public class ProgressServiceImpl extends ServiceImpl<ProgressMapper, Progress> i
                 progress.setRejectReason(rejectReason);
             } else if ("approved".equals(status)) {
                 progress.setRejectReason(null); // 如果通过，清除拒绝原因
+                
+                // 如果进度达到100%且审核通过，更新选题状态为已完成
+                if (progress.getPercentage() != null && progress.getPercentage() >= 100) {
+                    progress.setMilestoneStatus("completed");
+                    
+                    // 更新选题状态
+                    Selection selection = selectionService.getById(progress.getSelectionId());
+                    if (selection != null) {
+                        selection.setStatus("completed");
+                        selection.setUpdateTime(LocalDateTime.now());
+                        selectionService.updateById(selection);
+                    }
+                }
             }
             
             progress.setUpdateTime(LocalDateTime.now());
