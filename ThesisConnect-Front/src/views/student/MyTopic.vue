@@ -314,15 +314,16 @@
       
       <div class="documents-card">
         <el-table :data="documents" style="width: 100%">
-          <el-table-column prop="name" label="文档名称" min-width="200"></el-table-column>
+          <el-table-column prop="originalName" label="文档名称" min-width="200"></el-table-column>
           <el-table-column prop="type" label="文档类型" width="120"></el-table-column>
-          <el-table-column prop="size" label="文件大小" width="100"></el-table-column>
-          <el-table-column prop="uploadTime" label="上传时间" width="150"></el-table-column>
-          <el-table-column prop="status" label="状态" width="100">
+          <el-table-column label="文件大小" width="120">
             <template slot-scope="scope">
-              <el-tag :type="scope.row.status === 'approved' ? 'success' : scope.row.status === 'pending' ? 'warning' : 'danger'" size="small">
-                {{ getDocumentStatusText(scope.row.status) }}
-              </el-tag>
+              {{ (scope.row.size / 1024).toFixed(2) }} KB
+            </template>
+          </el-table-column>
+          <el-table-column label="上传时间" width="180">
+            <template slot-scope="scope">
+              {{ formatDateTime(scope.row.createTime) }}
             </template>
           </el-table-column>
           <el-table-column label="操作" width="150" fixed="right">
@@ -400,6 +401,29 @@
         <el-button type="primary" @click="submitProgress">提交</el-button>
       </span>
     </el-dialog>
+    <!-- 文档上传对话框 -->
+    <el-dialog
+      title="上传文档"
+      :visible.sync="documentDialogVisible"
+      width="400px">
+      <div class="upload-container">
+        <el-upload
+          class="upload-demo"
+          drag
+          action="#"
+          :http-request="handleDocumentUpload"
+          :file-list="documentFileList"
+          :on-remove="handleDocumentRemove"
+          multiple>
+          <i class="el-icon-upload"></i>
+          <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
+          <div class="el-upload__tip" slot="tip">支持各类文档格式，大小不超过50MB</div>
+        </el-upload>
+      </div>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="documentDialogVisible = false">关闭</el-button>
+      </span>
+    </el-dialog>
   </div>
 </template>
 
@@ -422,6 +446,8 @@ export default {
         reportUrl: ''
       },
       fileList: [],
+      documentDialogVisible: false,
+      documentFileList: [],
       
       // 真实数据
       myTopic: null,
@@ -782,7 +808,53 @@ export default {
     },
     
     uploadDocument() {
-      this.$message.info('文档上传功能开发中...');
+      this.documentDialogVisible = true;
+      this.documentFileList = [];
+    },
+    
+    async handleDocumentUpload(options) {
+      try {
+        const { file } = options;
+        
+        if (!this.myTopic) {
+          this.$message.error('无法获取选题信息');
+          options.onError();
+          return;
+        }
+        
+        // 限制文件大小 (例如 50MB)
+        const isLt50M = file.size / 1024 / 1024 < 50;
+        if (!isLt50M) {
+          this.$message.error('上传文件大小不能超过 50MB!');
+          options.onError();
+          return;
+        }
+
+        // 调用上传API
+        const response = await documentApi.uploadDocument(
+          file, 
+          this.myTopic.selectionId, 
+          this.myTopic.id // topicId
+        );
+        
+        if (response.code === 200) {
+          this.$message.success('文档上传成功');
+          // 刷新文档列表
+          await this.loadDocumentsData();
+          options.onSuccess(response.data);
+        } else {
+          this.$message.error(response.message || '上传失败');
+          options.onError();
+        }
+      } catch (error) {
+        console.error('上传出错:', error);
+        this.$message.error('上传出错');
+        options.onError();
+      }
+    },
+    
+    handleDocumentRemove(file, fileList) {
+      this.documentFileList = fileList;
     },
     
     async downloadDocument(document) {
