@@ -105,7 +105,7 @@
         <p class="login-link">
           已有账号？<a href="#" @click="goToLogin">立即登录</a>
         </p>
-        <p class="copyright">© 2024 毕业论文选题系统 版权所有</p>
+        <p class="copyright">© 2026 毕业论文选题系统 版权所有</p>
       </div>
     </div>
   </div>

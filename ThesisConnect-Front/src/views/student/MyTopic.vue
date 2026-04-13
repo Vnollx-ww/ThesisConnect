@@ -246,11 +246,19 @@
       </div>
       
       <div class="documents-card">
-        <el-table :data="documents" style="width: 100%">
-          <el-table-column prop="name" label="文档名称" min-width="200"></el-table-column>
+        <el-table :data="documents" style="width: 100%" empty-text="暂无文档，点击上方按钮上传">
+          <el-table-column prop="originalName" label="文档名称" min-width="200" show-overflow-tooltip></el-table-column>
           <el-table-column prop="type" label="文档类型" width="120"></el-table-column>
-          <el-table-column prop="size" label="文件大小" width="100"></el-table-column>
-          <el-table-column prop="uploadTime" label="上传时间" width="150"></el-table-column>
+          <el-table-column label="文件大小" width="120">
+            <template slot-scope="scope">
+              {{ formatFileSize(scope.row.size) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="上传时间" width="170">
+            <template slot-scope="scope">
+              {{ formatDateTime(scope.row.createTime) }}
+            </template>
+          </el-table-column>
           <el-table-column prop="status" label="状态" width="100">
             <template slot-scope="scope">
               <el-tag :type="scope.row.status === 'approved' ? 'success' : scope.row.status === 'pending' ? 'warning' : 'danger'" size="small">
@@ -258,10 +266,15 @@
               </el-tag>
             </template>
           </el-table-column>
+          <el-table-column label="审核意见" width="150" show-overflow-tooltip>
+            <template slot-scope="scope">
+              {{ scope.row.reviewComment || '-' }}
+            </template>
+          </el-table-column>
           <el-table-column label="操作" width="150" fixed="right">
             <template slot-scope="scope">
               <el-button type="text" size="small" @click="downloadDocument(scope.row)">下载</el-button>
-              <el-button type="text" size="small" @click="deleteDocument(scope.row)">删除</el-button>
+              <el-button type="text" size="small" style="color: #F56C6C" @click="deleteDocument(scope.row)">删除</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -278,6 +291,38 @@
       </div>
     </div>
     
+    <!-- 文档上传对话框 -->
+    <el-dialog
+      title="上传文档"
+      :visible.sync="uploadDialogVisible"
+      width="520px"
+      :close-on-click-modal="false">
+      <el-form label-width="80px">
+        <el-form-item label="选择文件">
+          <el-upload
+            ref="uploadRef"
+            class="document-upload"
+            drag
+            action=""
+            :auto-upload="false"
+            :limit="1"
+            :on-change="handleFileChange"
+            :on-remove="handleFileRemove"
+            :on-exceed="handleFileExceed"
+            :file-list="uploadFileList"
+            accept=".doc,.docx,.pdf,.ppt,.pptx,.xls,.xlsx,.txt,.zip,.rar">
+            <i class="el-icon-upload"></i>
+            <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
+            <div class="el-upload__tip" slot="tip">支持 Word、PDF、PPT、Excel、TXT、ZIP、RAR 格式，单个文件不超过 10MB</div>
+          </el-upload>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="uploadDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="uploadLoading" :disabled="!uploadFile" @click="submitUpload">确认上传</el-button>
+      </span>
+    </el-dialog>
+
     <!-- 进度更新对话框 -->
     <el-dialog
       title="更新进度"
@@ -335,6 +380,10 @@ export default {
     return {
       loading: false,
       progressDialogVisible: false,
+      uploadDialogVisible: false,
+      uploadLoading: false,
+      uploadFile: null,
+      uploadFileList: [],
       progressForm: {
         milestoneTitle: '',
         milestoneStatus: 'current',
@@ -629,18 +678,77 @@ export default {
     },
     
     uploadDocument() {
-      this.$message.info('文档上传功能开发中...');
+      this.uploadFile = null
+      this.uploadFileList = []
+      this.uploadDialogVisible = true
+    },
+
+    handleFileChange(file) {
+      const maxSize = 10 * 1024 * 1024 // 10MB
+      if (file.size > maxSize) {
+        this.$message.error('文件大小不能超过 10MB')
+        this.uploadFileList = []
+        this.uploadFile = null
+        return
+      }
+      this.uploadFile = file.raw
+    },
+
+    handleFileRemove() {
+      this.uploadFile = null
+    },
+
+    handleFileExceed() {
+      this.$message.warning('只能上传一个文件，请先移除已有文件')
+    },
+
+    async submitUpload() {
+      if (!this.uploadFile) {
+        this.$message.warning('请选择要上传的文件')
+        return
+      }
+      this.uploadLoading = true
+      try {
+        const response = await documentApi.uploadDocument(
+          this.uploadFile,
+          this.myTopic.selectionId,
+          this.myTopic.id
+        )
+        if (response.code === 200) {
+          this.$message.success('文档上传成功！')
+          this.uploadDialogVisible = false
+          await this.loadDocumentsData()
+        } else {
+          this.$message.error(response.message || '文档上传失败')
+        }
+      } catch (error) {
+        console.error('上传文档失败:', error)
+        this.$message.error('上传文档失败，请稍后重试')
+      } finally {
+        this.uploadLoading = false
+      }
+    },
+
+    formatFileSize(bytes) {
+      if (!bytes) return '0 B'
+      const units = ['B', 'KB', 'MB', 'GB']
+      let i = 0
+      let size = bytes
+      while (size >= 1024 && i < units.length - 1) {
+        size /= 1024
+        i++
+      }
+      return size.toFixed(i === 0 ? 0 : 1) + ' ' + units[i]
     },
     
-    async downloadDocument(document) {
+    async downloadDocument(doc) {
       try {
-        const response = await documentApi.downloadDocument(document.id)
-        // 处理文件下载
+        const response = await documentApi.downloadDocument(doc.id)
         const blob = new Blob([response])
         const url = window.URL.createObjectURL(blob)
-        const link = document.createElement('a')
+        const link = window.document.createElement('a')
         link.href = url
-        link.download = document.name
+        link.download = doc.originalName || doc.name
         link.click()
         window.URL.revokeObjectURL(url)
         this.$message.success('文档下载成功！')
@@ -1185,6 +1293,18 @@ export default {
 .no-topic-content p {
   color: #909399;
   margin: 0 0 20px 0;
+}
+
+.document-upload {
+  width: 100%;
+}
+
+.document-upload .el-upload {
+  width: 100%;
+}
+
+.document-upload .el-upload-dragger {
+  width: 100%;
 }
 
 /* 响应式设计 */
