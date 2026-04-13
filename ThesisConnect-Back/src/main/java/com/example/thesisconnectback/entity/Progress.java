@@ -87,6 +87,24 @@ public class Progress {
     private LocalDateTime milestoneDate;
 
     /**
+     * 报告文档URL
+     */
+    @TableField("report_url")
+    private String reportUrl;
+
+    /**
+     * 审核状态：pending-待审核，approved-已通过，rejected-已拒绝
+     */
+    @TableField("status")
+    private String status;
+
+    /**
+     * 拒绝原因
+     */
+    @TableField("reject_reason")
+    private String rejectReason;
+
+    /**
      * 创建时间
      */
     @TableField(value = "create_time", fill = FieldFill.INSERT)

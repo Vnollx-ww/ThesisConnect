@@ -126,7 +126,31 @@
               <el-button 
                 icon="el-icon-close"
                 @click="cancelApplication(app)">
-                取消申请
+                拒绝申请
+              </el-button>
+            </div>
+          </div>
+          
+          <div v-else-if="app.status === 'pending'" class="application-footer">
+            <div class="application-actions" style="width: 100%; justify-content: flex-end;">
+              <el-button 
+                type="danger" 
+                size="small"
+                icon="el-icon-delete"
+                @click="withdrawApplication(app)">
+                撤销申请
+              </el-button>
+            </div>
+          </div>
+          
+          <div v-else-if="app.status === 'rejected'" class="application-footer">
+            <div class="application-actions" style="width: 100%; justify-content: flex-end;">
+              <el-button 
+                type="info" 
+                size="small"
+                icon="el-icon-delete"
+                @click="deleteApplication(app)">
+                删除记录
               </el-button>
             </div>
           </div>
@@ -185,9 +209,33 @@
     
     <!-- 进度管理 -->
     <div v-if="myTopic" class="progress-section">
+      <!-- 结题评价展示 -->
+      <div v-if="myTopic.status === 'completed' && myTopic.finalGrade" class="completion-card" style="margin-bottom: 20px; background: #f0f9eb; border: 1px solid #e1f3d8; padding: 20px; border-radius: 4px;">
+        <div style="display: flex; align-items: center; margin-bottom: 15px;">
+          <i class="el-icon-s-claim" style="color: #67C23A; font-size: 24px; margin-right: 10px;"></i>
+          <h3 style="margin: 0; color: #67C23A;">恭喜！您的课题已结题</h3>
+        </div>
+        <div class="grade-info" style="display: flex; margin-bottom: 15px;">
+          <div style="margin-right: 30px;">
+            <span style="color: #606266; font-weight: bold;">最终成绩：</span>
+            <span style="font-size: 20px; color: #F56C6C; font-weight: bold;">{{ myTopic.finalGrade }}</span>
+          </div>
+        </div>
+        <div v-if="myTopic.teacherEvaluation" class="evaluation-info">
+          <div style="color: #606266; font-weight: bold; margin-bottom: 5px;">教师评价：</div>
+          <div style="color: #606266; line-height: 1.6; background: #fff; padding: 10px; border-radius: 4px;">
+            {{ myTopic.teacherEvaluation }}
+          </div>
+        </div>
+      </div>
+
       <div class="section-header">
         <h3>进度管理</h3>
-        <el-button type="primary" size="small" @click="editProgress">更新进度</el-button>
+        <el-tooltip :content="progressTooltip" placement="top" :disabled="!isUpdateDisabled">
+          <span style="display: inline-block;">
+            <el-button type="primary" size="small" @click="editProgress()" :disabled="isUpdateDisabled">更新进度</el-button>
+          </span>
+        </el-tooltip>
       </div>
       
       <div class="progress-card">
@@ -209,7 +257,10 @@
               :type="milestone.status === 'completed' ? 'success' : milestone.status === 'current' ? 'primary' : 'info'">
               <div class="milestone-content">
                 <div class="milestone-header">
-                  <h4>{{ milestone.title }}</h4>
+                  <h4 style="display: flex; align-items: center;">
+                    {{ milestone.title }}
+                    <el-tag size="mini" type="info" style="margin-left: 10px; font-weight: normal;">进度: {{ milestone.percentage }}%</el-tag>
+                  </h4>
                   <div class="milestone-actions">
                     <el-select 
                       v-model="milestone.status" 
@@ -229,7 +280,23 @@
                     size="small">
                     {{ getStatusText(milestone.status) }}
                   </el-tag>
-                  <span class="progress-text">进度: {{ milestone.percentage }}%</span>
+                  <div style="margin-top: 5px;">
+                    <el-tag 
+                      size="mini" 
+                      effect="dark"
+                      :type="milestone.auditStatus === 'approved' ? 'success' : milestone.auditStatus === 'rejected' ? 'danger' : 'warning'">
+                      {{ milestone.auditStatus === 'approved' ? '审核通过' : milestone.auditStatus === 'rejected' ? '审核未通过' : '待审核' }}
+                    </el-tag>
+                    <span v-if="milestone.reportUrl" style="margin-left: 10px;">
+                      <a :href="milestone.reportUrl" target="_blank" style="color: #409EFF; text-decoration: none;">
+                        <i class="el-icon-document"></i> 查看报告
+                      </a>
+                    </span>
+                  </div>
+                  <div v-if="milestone.auditStatus === 'rejected'" style="margin-top: 5px; color: #F56C6C; font-size: 12px;">
+                    <div>原因: {{ milestone.rejectReason }}</div>
+                    <el-button type="text" size="mini" @click="editProgress(milestone)" v-if="myTopic.status !== 'completed'">修改并重新提交</el-button>
+                  </div>
                 </div>
               </div>
             </el-timeline-item>
@@ -261,9 +328,12 @@
           </el-table-column>
           <el-table-column prop="status" label="状态" width="100">
             <template slot-scope="scope">
-              <el-tag :type="scope.row.status === 'approved' ? 'success' : scope.row.status === 'pending' ? 'warning' : 'danger'" size="small">
-                {{ getDocumentStatusText(scope.row.status) }}
-              </el-tag>
+              {{ (scope.row.size / 1024).toFixed(2) }} KB
+            </template>
+          </el-table-column>
+          <el-table-column label="上传时间" width="180">
+            <template slot-scope="scope">
+              {{ formatDateTime(scope.row.createTime) }}
             </template>
           </el-table-column>
           <el-table-column label="审核意见" width="150" show-overflow-tooltip>
@@ -282,7 +352,7 @@
     </div>
     
     <!-- 无选题状态 -->
-    <div v-else class="no-topic">
+    <div v-else-if="!applications || applications.length === 0" class="no-topic">
       <div class="no-topic-content">
         <i class="el-icon-document-remove"></i>
         <h3>您还没有选择课题</h3>
@@ -345,6 +415,17 @@
         <el-form-item label="当前进度">
           <el-slider v-model="progressForm.percentage" :min="0" :max="100"></el-slider>
         </el-form-item>
+        <el-form-item label="报告文档">
+          <el-upload
+            action="#"
+            :http-request="handleUpload"
+            :file-list="fileList"
+            :limit="1"
+            :on-remove="handleRemove">
+            <el-button size="small" type="primary">点击上传</el-button>
+            <div slot="tip" class="el-upload__tip">只能上传docx/pdf文件，每个进度需单独上传</div>
+          </el-upload>
+        </el-form-item>
         <el-form-item label="进度说明">
           <el-input
             v-model="progressForm.description"
@@ -367,11 +448,34 @@
         <el-button type="primary" @click="submitProgress">提交</el-button>
       </span>
     </el-dialog>
+    <!-- 文档上传对话框 -->
+    <el-dialog
+      title="上传文档"
+      :visible.sync="documentDialogVisible"
+      width="400px">
+      <div class="upload-container">
+        <el-upload
+          class="upload-demo"
+          drag
+          action="#"
+          :http-request="handleDocumentUpload"
+          :file-list="documentFileList"
+          :on-remove="handleDocumentRemove"
+          multiple>
+          <i class="el-icon-upload"></i>
+          <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
+          <div class="el-upload__tip" slot="tip">支持各类文档格式，大小不超过50MB</div>
+        </el-upload>
+      </div>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="documentDialogVisible = false">关闭</el-button>
+      </span>
+    </el-dialog>
   </div>
 </template>
 
 <script>
-import { selectionApi, progressApi, documentApi, topicApi } from '@/api'
+import { selectionApi, progressApi, documentApi, topicApi, fileApi } from '@/api'
 import { getCurrentUserId } from '@/utils/user'
 
 export default {
@@ -389,14 +493,38 @@ export default {
         milestoneStatus: 'current',
         percentage: 0,
         description: '',
-        problems: ''
+        problems: '',
+        reportUrl: ''
       },
+      fileList: [],
+      documentDialogVisible: false,
+      documentFileList: [],
       
       // 真实数据
       myTopic: null,
       milestones: [],
       documents: [],
       applications: [] // 我的申请列表
+    }
+  },
+  computed: {
+    // 检查是否有待审核的进度
+    hasPendingReview() {
+      if (!this.milestones || this.milestones.length === 0) return false;
+      // 只要有一个状态是pending，就认为有待审核的
+      return this.milestones.some(m => m.auditStatus === 'pending');
+    },
+    isUpdateDisabled() {
+      return this.hasPendingReview || (this.myTopic && this.myTopic.status === 'completed');
+    },
+    progressTooltip() {
+      if (this.myTopic && this.myTopic.status === 'completed') {
+        return '课题已结题，不能更新进度';
+      }
+      if (this.hasPendingReview) {
+        return '当前有待审核的进度，请等待审核完成后再提交';
+      }
+      return '';
     }
   },
   async mounted() {
@@ -424,7 +552,7 @@ export default {
             s.status === 'confirmed' || s.status === 'active' || s.status === 'completed'
           )
           const pendingApplications = selectionResponse.data.filter(s => 
-            s.status === 'pending' || s.status === 'approved'
+            s.status === 'pending' || s.status === 'approved' || s.status === 'rejected'
           )
           
           this.applications = pendingApplications
@@ -448,6 +576,7 @@ export default {
                   progressDescription: selection.progressDescription,
                   problems: selection.problems,
                   finalGrade: selection.finalGrade,
+                  teacherEvaluation: selection.teacherEvaluation,
                   studentId: selection.studentId,
                   studentName: selection.studentName,
                   studentNumber: selection.studentNumber,
@@ -509,7 +638,11 @@ export default {
               id: item.id,
               title: item.milestoneTitle || '进度更新', // 为没有标题的记录提供默认标题
               description: item.milestoneDescription || item.description || '',
+              problems: item.problems,
               status: item.milestoneStatus || 'pending',
+              auditStatus: item.status || 'pending',
+              rejectReason: item.rejectReason,
+              reportUrl: item.reportUrl,
               date: item.milestoneDate || item.createTime,
               percentage: item.percentage
             }))
@@ -518,6 +651,41 @@ export default {
       } catch (error) {
         console.error('加载进度数据失败:', error)
       }
+    },
+
+    // 文件上传处理
+    async handleUpload(options) {
+      try {
+        const { file } = options
+        // 检查文件类型
+        const isDoc = file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || 
+                      file.type === 'application/pdf' || 
+                      file.name.endsWith('.docx') || 
+                      file.name.endsWith('.pdf')
+        
+        if (!isDoc) {
+          this.$message.error('只能上传 docx 或 pdf 格式的文件!')
+          return
+        }
+
+        const response = await fileApi.uploadFile(file)
+        if (response.code === 200) {
+          this.progressForm.reportUrl = response.data
+          this.$message.success('文件上传成功')
+        } else {
+          this.$message.error('文件上传失败')
+          this.fileList = []
+        }
+      } catch (error) {
+        console.error('文件上传出错:', error)
+        this.$message.error('文件上传出错')
+        this.fileList = []
+      }
+    },
+
+    handleRemove() {
+      this.progressForm.reportUrl = ''
+      this.fileList = []
     },
     
     // 加载文档数据
@@ -640,10 +808,22 @@ export default {
       return statusMap[status] || '未知';
     },
     
-    editProgress() {
-      this.progressForm.percentage = this.myTopic.progress;
-      this.progressForm.description = '';
-      this.progressForm.problems = '';
+    editProgress(milestone) {
+      if (milestone && milestone.id) {
+        this.progressForm.milestoneTitle = milestone.title;
+        this.progressForm.milestoneStatus = milestone.status;
+        this.progressForm.percentage = milestone.percentage;
+        this.progressForm.description = milestone.description;
+        this.progressForm.problems = milestone.problems;
+        this.progressForm.reportUrl = ''; // 重置文件，要求重新上传
+        this.fileList = [];
+      } else {
+        this.progressForm.percentage = this.myTopic.progress;
+        this.progressForm.description = '';
+        this.progressForm.problems = '';
+        this.progressForm.reportUrl = '';
+        this.fileList = [];
+      }
       this.progressDialogVisible = true;
     },
     
@@ -655,7 +835,8 @@ export default {
           milestoneStatus: this.progressForm.milestoneStatus,
           percentage: this.progressForm.percentage,
           description: this.progressForm.description,
-          problems: this.progressForm.problems
+          problems: this.progressForm.problems,
+          reportUrl: this.progressForm.reportUrl
         }
         
         const response = await progressApi.updateProgress(progressData)
@@ -784,7 +965,7 @@ export default {
     },
     
     goToTopics() {
-      this.$router.push('/layout/student/topics');
+      this.$router.push('/student/topics');
     },
     
     // 获取申请状态文本
@@ -864,6 +1045,58 @@ export default {
           }
         } catch (error) {
           console.error('拒绝申请失败:', error)
+          this.$message.error('操作失败，请稍后重试')
+        }
+      })
+    },
+    
+    // 撤销申请（学生撤销待审核的申请）
+    async withdrawApplication(app) {
+      this.$confirm('确定要撤销这个申请吗？', '确认撤销', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(async () => {
+        try {
+          // 调用后端接口，删除该申请
+          const response = await selectionApi.cancelSelection(app.id)
+          if (response.code === 200) {
+            this.$message.success('申请已撤销')
+            // 重新加载数据
+            await this.loadMyTopicData()
+          } else {
+            this.$message.error(response.message || '操作失败')
+          }
+        } catch (error) {
+          console.error('撤销申请失败:', error)
+          this.$message.error('操作失败，请稍后重试')
+        }
+      })
+    },
+    
+    // 删除记录（删除已拒绝的申请记录）
+    async deleteApplication(app) {
+      this.$confirm('确定要删除这条记录吗？', '确认删除', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(async () => {
+        try {
+          // 调用后端接口，删除该记录
+          // 注意：后端cancelSelection接口目前只允许删除pending状态，需要修改后端支持删除rejected状态
+          // 或者前端不调用后端，只是隐藏显示？不，应该调用后端彻底删除。
+          // 我们需要让后端cancelSelection支持删除rejected状态，或者增加一个新的delete接口
+          // 暂时复用cancelSelection，但需要后端配合修改
+          const response = await selectionApi.cancelSelection(app.id)
+          if (response.code === 200) {
+            this.$message.success('记录已删除')
+            // 重新加载数据
+            await this.loadMyTopicData()
+          } else {
+            this.$message.error(response.message || '操作失败')
+          }
+        } catch (error) {
+          console.error('删除记录失败:', error)
           this.$message.error('操作失败，请稍后重试')
         }
       })

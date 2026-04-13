@@ -155,13 +155,52 @@
               </el-button>
               <el-button type="text" size="small" @click="viewStudentDetail(scope.row)" style="margin-right: 5px;">详情</el-button>
               <el-button type="text" size="small" @click="sendMessage(scope.row)" style="margin-right: 5px;">消息</el-button>
-              <el-button type="text" size="small" @click="evaluateStudent(scope.row)">评价</el-button>
+              <el-button 
+                v-if="scope.row.selection_status === 'completed'"
+                type="text" 
+                size="small" 
+                @click="handleGrade(scope.row)">
+                评分
+              </el-button>
             </template>
           </el-table-column>
         </el-table>
       </div>
     </div>
     
+    <!-- 评分对话框 -->
+    <el-dialog
+      title="学生评分"
+      :visible.sync="gradeDialogVisible"
+      width="500px">
+      <el-form :model="gradeForm" label-width="100px">
+        <el-form-item label="学生姓名">
+          <el-input v-model="gradeForm.studentName" disabled></el-input>
+        </el-form-item>
+        <el-form-item label="最终成绩">
+          <el-select v-model="gradeForm.grade" placeholder="请选择成绩等级">
+            <el-option label="优秀 (A)" value="A"></el-option>
+            <el-option label="良好 (B)" value="B"></el-option>
+            <el-option label="中等 (C)" value="C"></el-option>
+            <el-option label="及格 (D)" value="D"></el-option>
+            <el-option label="不及格 (F)" value="F"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="教师评价">
+          <el-input
+            v-model="gradeForm.evaluation"
+            type="textarea"
+            :rows="4"
+            placeholder="请输入对学生毕设工作的详细评价">
+          </el-input>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="gradeDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitGrade">提交评分</el-button>
+      </span>
+    </el-dialog>
+
     <!-- 学生详情对话框 -->
     <el-dialog
       title="学生详情"
@@ -298,6 +337,37 @@
                         <span class="progress-text">进度: {{ progress.percentage }}%</span>
                         <span class="progress-time">{{ formatDateTime(progress.createTime) }}</span>
                       </div>
+                      
+                      <!-- 报告文档与审核状态 -->
+                      <div class="review-section" style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #eee;">
+                        <div v-if="progress.reportUrl" style="margin-bottom: 5px;">
+                          <a :href="progress.reportUrl" target="_blank" style="color: #409EFF; text-decoration: none; display: flex; align-items: center;">
+                            <i class="el-icon-document" style="margin-right: 5px;"></i> 查看报告文档
+                          </a>
+                        </div>
+                        
+                        <div class="audit-status" style="display: flex; align-items: center; justify-content: space-between; margin-top: 5px;">
+                          <div>
+                            <span style="color: #909399; font-size: 12px; margin-right: 5px;">审核状态:</span>
+                            <el-tag 
+                              size="mini" 
+                              effect="dark"
+                              :type="progress.status === 'approved' ? 'success' : progress.status === 'rejected' ? 'danger' : 'warning'">
+                              {{ progress.status === 'approved' ? '审核通过' : progress.status === 'rejected' ? '审核未通过' : '待审核' }}
+                            </el-tag>
+                          </div>
+                          
+                          <div v-if="progress.status === 'pending' || !progress.status" class="audit-actions">
+                            <el-button type="text" size="mini" style="color: #67C23A" @click="handleReview(progress, 'approved')">通过</el-button>
+                            <el-button type="text" size="mini" style="color: #F56C6C" @click="handleReview(progress, 'rejected')">拒绝</el-button>
+                          </div>
+                        </div>
+                        
+                        <div v-if="progress.status === 'rejected'" class="reject-reason" style="margin-top: 5px; background-color: #FEF0F0; padding: 5px 10px; border-radius: 4px;">
+                          <span style="color: #F56C6C; font-size: 12px;">拒绝原因: {{ progress.rejectReason }}</span>
+                        </div>
+                      </div>
+                      
                       <div class="problems-section" v-if="progress.problems">
                         <h5>遇到的问题</h5>
                         <p>{{ progress.problems }}</p>
@@ -476,6 +546,27 @@
         <el-button @click="detailDialogVisible = false">关闭</el-button>
       </span>
     </el-dialog>
+
+    <!-- 进度审核拒绝原因对话框 -->
+    <el-dialog
+      title="拒绝进度更新"
+      :visible.sync="reviewDialogVisible"
+      width="400px">
+      <el-form :model="reviewForm">
+        <el-form-item label="拒绝原因">
+          <el-input
+            v-model="reviewForm.rejectReason"
+            type="textarea"
+            :rows="3"
+            placeholder="请输入拒绝原因，以便学生修改">
+          </el-input>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="reviewDialogVisible = false">取消</el-button>
+        <el-button type="danger" @click="submitReview">确认拒绝</el-button>
+      </span>
+    </el-dialog>
   </div>
 </template>
 
@@ -498,6 +589,22 @@ export default {
       selectedStudent: null,
       selectedTopic: null,
       studentProgressList: [],
+      
+      // 进度审核相关
+      reviewDialogVisible: false,
+      currentReviewProgress: null,
+      reviewForm: {
+        rejectReason: ''
+      },
+      
+      // 评分相关
+      gradeDialogVisible: false,
+      currentGradeStudent: null,
+      gradeForm: {
+        studentName: '',
+        grade: '',
+        evaluation: ''
+      },
       
       messageForm: {
         receiver: '',
@@ -650,6 +757,47 @@ export default {
     submitEvaluation() {
       this.evaluateDialogVisible = false;
       this.$message.success('评价提交成功！');
+    },
+    
+    // 处理评分
+    handleGrade(student) {
+      this.currentGradeStudent = student;
+      this.gradeForm.studentName = student.real_name;
+      // 如果已有成绩，回显
+      this.gradeForm.grade = student.final_grade || '';
+      // 注意：后端返回的Map可能没有teacher_evaluation字段，如果有的话可以在这里回显
+      // 目前后端getStudentsByTeacherWithSelection没有显式查出teacher_evaluation，可以后续补充
+      this.gradeForm.evaluation = ''; 
+      this.gradeDialogVisible = true;
+    },
+    
+    // 提交评分
+    async submitGrade() {
+      if (!this.gradeForm.grade) {
+        this.$message.warning('请选择最终成绩');
+        return;
+      }
+      
+      try {
+        const gradeData = {
+          grade: this.gradeForm.grade,
+          evaluation: this.gradeForm.evaluation
+        };
+        
+        const response = await selectionApi.gradeSelection(this.currentGradeStudent.selection_id, gradeData);
+        if (response.code === 200) {
+          this.$message.success('评分提交成功！');
+          this.gradeDialogVisible = false;
+          // 刷新列表
+          await this.loadStudents();
+          await this.loadStats();
+        } else {
+          this.$message.error(response.message || '评分提交失败');
+        }
+      } catch (error) {
+        console.error('评分提交失败:', error);
+        this.$message.error('评分提交失败，请稍后重试');
+      }
     },
     
     async reviewSelection(student, status) {
@@ -837,6 +985,71 @@ export default {
       }
     },
     
+    // 进度审核
+    handleReview(progress, status) {
+      if (status === 'rejected') {
+        this.currentReviewProgress = progress;
+        this.reviewForm.rejectReason = '';
+        this.reviewDialogVisible = true;
+      } else {
+        this.$confirm('确定要通过这条进度更新吗？', '确认通过', {
+          confirmButtonText: '确定',
+          cancelButtonText: '取消',
+          type: 'success'
+        }).then(async () => {
+          try {
+            const reviewData = {
+              id: progress.id,
+              status: 'approved',
+              rejectReason: ''
+            };
+            const response = await progressApi.reviewProgress(reviewData);
+            if (response.code === 200) {
+              this.$message.success('审核已通过');
+              // 刷新进度列表
+              if (this.selectedStudent) {
+                await this.loadStudentProgress(this.selectedStudent.id);
+              }
+            } else {
+              this.$message.error(response.message || '操作失败');
+            }
+          } catch (error) {
+            console.error('审核失败:', error);
+            this.$message.error('审核失败，请稍后重试');
+          }
+        });
+      }
+    },
+
+    async submitReview() {
+      if (!this.reviewForm.rejectReason.trim()) {
+        this.$message.warning('请输入拒绝原因');
+        return;
+      }
+      
+      try {
+        const reviewData = {
+          id: this.currentReviewProgress.id,
+          status: 'rejected',
+          rejectReason: this.reviewForm.rejectReason
+        };
+        const response = await progressApi.reviewProgress(reviewData);
+        if (response.code === 200) {
+          this.$message.success('已拒绝该进度更新');
+          this.reviewDialogVisible = false;
+          // 刷新进度列表
+          if (this.selectedStudent) {
+            await this.loadStudentProgress(this.selectedStudent.id);
+          }
+        } else {
+          this.$message.error(response.message || '操作失败');
+        }
+      } catch (error) {
+        console.error('审核失败:', error);
+        this.$message.error('审核失败，请稍后重试');
+      }
+    },
+
     // 获取里程碑状态文本
     getMilestoneStatusText(status) {
       const statusMap = {

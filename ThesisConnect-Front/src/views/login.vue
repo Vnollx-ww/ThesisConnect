@@ -101,6 +101,10 @@ export default {
                 localStorage.setItem('token', response.data.token);
                 localStorage.setItem('user', JSON.stringify(response.data.user));
                 localStorage.setItem('role', response.data.role);
+                // 保存userId，避免后续频繁请求用户信息
+                if (response.data.user && response.data.user.id) {
+                  localStorage.setItem('userId', response.data.user.id);
+                }
                 
                 // 根据角色跳转到不同页面
                 if (this.loginForm.role === 'student') {

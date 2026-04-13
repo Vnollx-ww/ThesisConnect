@@ -3,6 +3,7 @@ package com.example.thesisconnectback.service.impl;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.thesisconnectback.entity.Progress;
 import com.example.thesisconnectback.entity.Selection;
+import com.example.thesisconnectback.exception.BusinessException;
 import com.example.thesisconnectback.mapper.ProgressMapper;
 import com.example.thesisconnectback.service.ProgressService;
 import com.example.thesisconnectback.service.SelectionService;
@@ -25,13 +26,30 @@ public class ProgressServiceImpl extends ServiceImpl<ProgressMapper, Progress> i
     private SelectionService selectionService;
 
     @Override
-    public boolean updateProgress(Long selectionId, String milestoneTitle, String milestoneStatus, Integer percentage, String description, String problems, Long studentId, String studentName) {
+    public boolean updateProgress(Long selectionId, String milestoneTitle, String milestoneStatus, Integer percentage, String description, String problems, String reportUrl, Long studentId, String studentName) {
         try {
+            // 检查是否有待审核的进度记录
+            com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Progress> queryWrapper = new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<>();
+            queryWrapper.eq("selection_id", selectionId);
+            queryWrapper.eq("status", "pending");
+            
+            // 如果存在待审核记录，并且不是在修改（这里updateProgress每次都新增，所以如果是修改被拒绝的，旧的已经是rejected了，不会查出来；如果是pending的，就查出来了）
+            // 但是要注意，updateProgress如果被用来修改已有的（比如updateById），那逻辑不一样。
+            // 目前updateProgress实现全是new Progress()然后save。所以这里逻辑是：只要有pending的，就不允许提交新的。
+            if (this.count(queryWrapper) > 0) {
+                throw new BusinessException("当前有待审核的进度记录，请等待审核完成后再提交新的进度");
+            }
+
             // 首先获取选题记录，从中获取topicId
             Selection selection = selectionService.getById(selectionId);
             if (selection == null) {
                 log.error("选题记录不存在，selectionId: {}", selectionId);
                 return false;
+            }
+
+            // 检查课题是否已结题
+            if ("completed".equals(selection.getStatus())) {
+                throw new BusinessException("课题已结题，无法更新进度");
             }
 
             Progress progress = new Progress();
@@ -42,6 +60,8 @@ public class ProgressServiceImpl extends ServiceImpl<ProgressMapper, Progress> i
             progress.setPercentage(percentage);
             progress.setDescription(description);
             progress.setProblems(problems);
+            progress.setReportUrl(reportUrl);
+            progress.setStatus("pending"); // 默认为待审核
             
             // 设置里程碑信息
             progress.setMilestoneTitle(milestoneTitle != null && !milestoneTitle.trim().isEmpty() ? milestoneTitle : "进度更新");
@@ -75,6 +95,44 @@ public class ProgressServiceImpl extends ServiceImpl<ProgressMapper, Progress> i
             return progressSaved;
         } catch (Exception e) {
             log.error("更新进度失败：", e);
+            return false;
+        }
+    }
+
+    @Override
+    public boolean reviewProgress(Long id, String status, String rejectReason) {
+        try {
+            Progress progress = this.getById(id);
+            if (progress == null) {
+                log.error("进度记录不存在，id: {}", id);
+                return false;
+            }
+            
+            progress.setStatus(status);
+            if ("rejected".equals(status)) {
+                progress.setRejectReason(rejectReason);
+            } else if ("approved".equals(status)) {
+                progress.setRejectReason(null); // 如果通过，清除拒绝原因
+                
+                // 如果进度达到100%且审核通过，更新选题状态为已完成
+                if (progress.getPercentage() != null && progress.getPercentage() >= 100) {
+                    progress.setMilestoneStatus("completed");
+                    
+                    // 更新选题状态
+                    Selection selection = selectionService.getById(progress.getSelectionId());
+                    if (selection != null) {
+                        selection.setStatus("completed");
+                        selection.setUpdateTime(LocalDateTime.now());
+                        selectionService.updateById(selection);
+                    }
+                }
+            }
+            
+            progress.setUpdateTime(LocalDateTime.now());
+            
+            return this.updateById(progress);
+        } catch (Exception e) {
+            log.error("审核进度失败：", e);
             return false;
         }
     }

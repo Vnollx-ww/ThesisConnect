@@ -11,12 +11,23 @@
         <div class="profile-card">
           <div class="profile-header">
             <div class="avatar-section">
-              <el-avatar :size="80" :src="userInfo.avatar">
-                <i class="el-icon-user-solid"></i>
-              </el-avatar>
-              <el-button type="text" @click="changeAvatar" class="change-avatar-btn">
-                更换头像
-              </el-button>
+              <el-upload
+                class="avatar-uploader"
+                action="#"
+                :show-file-list="false"
+                :http-request="uploadAvatar"
+                :before-upload="beforeAvatarUpload">
+                <div class="avatar-wrapper">
+                  <el-avatar :size="80" :src="userInfo.avatar">
+                    <i class="el-icon-user-solid"></i>
+                  </el-avatar>
+                  <div class="avatar-mask">
+                    <i class="el-icon-camera"></i>
+                    <span>更换</span>
+                  </div>
+                </div>
+              </el-upload>
+              <div class="change-avatar-text">点击头像更换</div>
             </div>
             <div class="user-basic-info">
               <h3>{{ userInfo.name }}</h3>
@@ -44,7 +55,7 @@
         <!-- 快捷操作 -->
         <div class="quick-actions">
           <h4>快捷操作</h4>
-          <el-button type="primary" @click="editProfile" class="action-btn">
+          <el-button @click="editProfile" class="action-btn">
             <i class="el-icon-edit"></i>
             编辑资料
           </el-button>
@@ -271,7 +282,7 @@
 </template>
 
 <script>
-import { authApi, userApi } from '@/api'
+import { authApi, userApi, fileApi } from '@/api'
 
 export default {
   name: 'TeacherProfile',
@@ -480,8 +491,49 @@ export default {
       return '';
     },
     
-    changeAvatar() {
-      this.$message.info('头像上传功能开发中...');
+    async uploadAvatar(params) {
+      try {
+        const file = params.file
+        const response = await fileApi.uploadFile(file)
+        
+        if (response.code === 200) {
+          const avatarUrl = response.data
+          this.userInfo.avatar = avatarUrl
+          
+          // 立即更新用户信息中的头像
+          const updateData = {
+            avatar: avatarUrl
+          }
+          
+          const updateResponse = await authApi.updateUserInfo(updateData)
+          if (updateResponse.code === 200) {
+            this.$message.success('头像更换成功')
+          } else {
+            this.$message.warning('头像上传成功但保存失败')
+          }
+        } else {
+          this.$message.error(response.message || '头像上传失败')
+        }
+      } catch (error) {
+        console.error('头像上传异常:', error)
+        this.$message.error('头像上传失败，请稍后重试')
+      }
+    },
+    
+    beforeAvatarUpload(file) {
+      const isJPG = file.type === 'image/jpeg';
+      const isPNG = file.type === 'image/png';
+      const isLt2M = file.size / 1024 / 1024 < 2;
+
+      if (!isJPG && !isPNG) {
+        this.$message.error('上传头像图片只能是 JPG 或 PNG 格式!');
+        return false;
+      }
+      if (!isLt2M) {
+        this.$message.error('上传头像图片大小不能超过 2MB!');
+        return false;
+      }
+      return true;
     },
     
     changePassword() {
@@ -549,6 +601,49 @@ export default {
 .avatar-section {
   text-align: center;
   margin-right: 20px;
+}
+
+.avatar-wrapper {
+  position: relative;
+  cursor: pointer;
+  border-radius: 50%;
+  overflow: hidden;
+  display: inline-block;
+}
+
+.avatar-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.avatar-wrapper:hover .avatar-mask {
+  opacity: 1;
+}
+
+.avatar-mask i {
+  font-size: 20px;
+  margin-bottom: 5px;
+}
+
+.avatar-mask span {
+  font-size: 12px;
+}
+
+.change-avatar-text {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #909399;
 }
 
 .change-avatar-btn {

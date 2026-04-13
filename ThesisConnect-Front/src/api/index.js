@@ -151,6 +151,11 @@ export const selectionApi = {
     return request.post(`/api/selections/${id}/review`, reviewData)
   },
   
+  // 评价打分
+  gradeSelection(id, gradeData) {
+    return request.post(`/api/selections/${id}/grade`, gradeData)
+  },
+  
   // 学生确认申请
   confirmSelection(id) {
     return request.post(`/api/selections/${id}/confirm`)
@@ -248,6 +253,11 @@ export const progressApi = {
     return request.post('/api/progress/update', progressData)
   },
   
+  // 审核进度
+  reviewProgress(reviewData) {
+    return request.post('/api/progress/review', reviewData)
+  },
+  
   // 添加里程碑
   addMilestone(milestoneData) {
     return request.post('/api/progress/milestone', milestoneData)
@@ -281,6 +291,20 @@ export const progressApi = {
   // 获取进度统计
   getProgressStats() {
     return request.get('/api/progress/stats')
+  }
+}
+
+// 文件相关API
+export const fileApi = {
+  // 上传文件
+  uploadFile(file) {
+    const formData = new FormData()
+    formData.append('file', file)
+    return request.post('/api/file/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
   }
 }
 

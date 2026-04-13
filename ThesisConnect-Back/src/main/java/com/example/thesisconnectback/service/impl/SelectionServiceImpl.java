@@ -66,6 +66,11 @@ public class SelectionServiceImpl extends ServiceImpl<SelectionMapper, Selection
             return false;
         }
 
+        // 检查学生是否被该课题拒绝过
+        if (selectionMapper.countRejectedByStudentAndTopic(studentId, topicId) > 0) {
+            return false;
+        }
+
         // 获取课题信息
         Topic topic = topicMapper.selectById(topicId);
         if (topic == null) {
@@ -95,12 +100,14 @@ public class SelectionServiceImpl extends ServiceImpl<SelectionMapper, Selection
 
         boolean saved = save(selection);
         
-        // 如果保存成功，更新课题的已选学生数为待审核+已审核的数量
+        // 申请时不增加课题的已选人数，只有在确认后才增加
+        /*
         if (saved) {
             // 计算该课题的选题总数（包括待审核和已审核的）
             int totalSelections = selectionMapper.countByTopicId(topicId);
             topicMapper.updateSelectedCount(topicId, totalSelections);
         }
+        */
         
         return saved;
     }
@@ -109,14 +116,15 @@ public class SelectionServiceImpl extends ServiceImpl<SelectionMapper, Selection
     @Transactional
     public boolean cancelSelection(Long selectionId) {
         Selection selection = getById(selectionId);
-        if (selection != null && "pending".equals(selection.getStatus())) {
+        // 允许撤销待审核的申请，或删除已拒绝的记录
+        if (selection != null && ("pending".equals(selection.getStatus()) || "rejected".equals(selection.getStatus()))) {
             Long topicId = selection.getTopicId();
             boolean removed = removeById(selectionId);
             
-            // 如果删除成功，更新课题的已选学生数
+            // 如果删除成功，更新课题的已选人数（重新计算已确认的人数）
             if (removed) {
-                int totalSelections = selectionMapper.countByTopicId(topicId);
-                topicMapper.updateSelectedCount(topicId, totalSelections);
+                int confirmedCount = selectionMapper.countConfirmedByTopicId(topicId);
+                topicMapper.updateSelectedCount(topicId, confirmedCount);
             }
             
             return removed;
@@ -153,7 +161,17 @@ public class SelectionServiceImpl extends ServiceImpl<SelectionMapper, Selection
         if (selection != null) {
             selection.setStatus(status);
             selection.setUpdateTime(LocalDateTime.now());
-            return updateById(selection);
+            boolean updated = updateById(selection);
+            
+            // 如果状态变为confirmed，更新课题的已选人数
+            if (updated && "confirmed".equals(status)) {
+                Long topicId = selection.getTopicId();
+                // 统计该课题所有已确认的选题数量
+                int confirmedCount = selectionMapper.countConfirmedByTopicId(topicId);
+                topicMapper.updateSelectedCount(topicId, confirmedCount);
+            }
+            
+            return updated;
         }
         return false;
     }
@@ -165,6 +183,19 @@ public class SelectionServiceImpl extends ServiceImpl<SelectionMapper, Selection
             selection.setProgress(progress);
             selection.setProgressDescription(description);
             selection.setProblems(problems);
+            selection.setUpdateTime(LocalDateTime.now());
+            return updateById(selection);
+        }
+        return false;
+    }
+
+    @Override
+    public boolean gradeSelection(Long selectionId, String grade, String evaluation) {
+        Selection selection = getById(selectionId);
+        if (selection != null) {
+            selection.setFinalGrade(grade);
+            selection.setTeacherEvaluation(evaluation);
+            selection.setStatus("completed"); // 确保状态为已完成
             selection.setUpdateTime(LocalDateTime.now());
             return updateById(selection);
         }

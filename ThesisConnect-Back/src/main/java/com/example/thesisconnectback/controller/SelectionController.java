@@ -121,7 +121,16 @@ public class SelectionController {
             if (success) {
                 return Result.success("选题成功");
             } else {
-                return Result.error("选题失败");
+                // 再次检查是否是因为被拒绝
+                try {
+                     // 反射调用mapper检查，或者简单返回通用错误
+                     // 这里简单处理，如果返回false且不是以上原因，可能是被拒绝了
+                     // 更好的方式是在service抛出异常或返回具体错误码，这里暂时通过Result返回通用失败
+                     // 实际上我们可以优化service让它抛出异常
+                     return Result.error("选题失败，您可能已被该课题拒绝或不满足其他条件");
+                } catch (Exception e) {
+                    return Result.error("选题失败");
+                }
             }
         } catch (Exception e) {
             log.error("选择课题失败：", e);
@@ -149,16 +158,16 @@ public class SelectionController {
                 return Result.forbidden("权限不足");
             }
 
-            // 只有待审核状态可以取消
-            if (!"pending".equals(selection.getStatus())) {
-                return Result.error("只有待审核状态的选题可以取消");
+            // 只有待审核或已拒绝状态可以取消/删除
+            if (!"pending".equals(selection.getStatus()) && !"rejected".equals(selection.getStatus())) {
+                return Result.error("只有待审核或已拒绝状态的选题可以取消或删除");
             }
 
             boolean success = selectionService.cancelSelection(id);
             if (success) {
-                return Result.success("取消选题成功");
+                return Result.success("操作成功");
             } else {
-                return Result.error("取消选题失败");
+                return Result.error("操作失败");
             }
         } catch (Exception e) {
             log.error("取消选题失败：", e);
@@ -270,6 +279,37 @@ public class SelectionController {
         } catch (Exception e) {
             log.error("更新进度失败：", e);
             return Result.error("更新进度失败");
+        }
+    }
+
+    /**
+     * 评价打分
+     */
+    @PostMapping("/{id}/grade")
+    public Result<Void> gradeSelection(@PathVariable Long id, @RequestBody Map<String, String> gradeForm, HttpServletRequest request) {
+        try {
+            // 检查权限（只有教师可以打分）
+            String role = (String) request.getAttribute("role");
+            if (!"teacher".equals(role)) {
+                return Result.forbidden("权限不足");
+            }
+
+            String grade = gradeForm.get("grade");
+            String evaluation = gradeForm.get("evaluation");
+
+            if (grade == null || grade.isEmpty()) {
+                return Result.badRequest("成绩不能为空");
+            }
+
+            boolean success = selectionService.gradeSelection(id, grade, evaluation);
+            if (success) {
+                return Result.success("评价打分成功");
+            } else {
+                return Result.error("评价打分失败");
+            }
+        } catch (Exception e) {
+            log.error("评价打分失败：", e);
+            return Result.error("评价打分失败");
         }
     }
 

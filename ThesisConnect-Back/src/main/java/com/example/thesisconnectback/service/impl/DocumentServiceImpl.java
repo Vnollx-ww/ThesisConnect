@@ -65,7 +65,7 @@ public class DocumentServiceImpl extends ServiceImpl<DocumentMapper, Document> i
             document.setUploaderName(uploaderName);
             document.setSelectionId(selectionId);
             document.setTopicId(topicId);
-            document.setStatus("pending");
+            document.setStatus("approved"); // 默认不需要审核
             document.setDownloadCount(0);
             document.setCreateTime(LocalDateTime.now());
             document.setUpdateTime(LocalDateTime.now());
