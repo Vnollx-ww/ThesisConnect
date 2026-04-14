@@ -390,6 +390,7 @@
 
 <script>
 import { topicApi, userApi } from '@/api/index'
+import { exportToExcel } from '@/utils/export'
 
 export default {
   name: 'AdminTopics',
@@ -725,7 +726,25 @@ export default {
     },
     
     exportTopics() {
-      this.$message.info('课题导出功能开发中...');
+      if (!this.topics || this.topics.length === 0) {
+        this.$message.warning('没有可导出的数据')
+        return
+      }
+      const exportData = this.topics.map(topic => ({
+        'Title': topic.title,
+        'Teacher': topic.teacherName,
+        'Major': topic.major,
+        'Difficulty': this.getDifficultyText(topic.difficulty),
+        'Max Students': topic.maxStudents,
+        'Selected': topic.selectedCount,
+        'Status': this.getStatusText(topic.status),
+        'Views': topic.viewCount,
+        'Rating': topic.rating || 'N/A',
+        'Deadline': topic.deadline ? new Date(topic.deadline).toLocaleDateString() : 'N/A'
+      }))
+      const fileName = `Topics_${new Date().toISOString().slice(0, 10)}.xlsx`
+      exportToExcel(exportData, 'Topics', fileName)
+      this.$message.success('导出成功')
     },
     
     getDifficultyType(difficulty) {

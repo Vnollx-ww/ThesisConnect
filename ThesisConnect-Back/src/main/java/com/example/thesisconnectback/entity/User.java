@@ -39,6 +39,12 @@ public class User {
     private String realName;
 
     /**
+     * 姓名别名（用于返回给前端，非数据库字段）
+     */
+    @TableField(exist = false)
+    private String name;
+
+    /**
      * 邮箱
      */
     @TableField("email")
@@ -144,4 +150,10 @@ public class User {
     @TableLogic
     @TableField("deleted")
     private Integer deleted;
+
+    /**
+     * 选题进度（非数据库字段，用于课题详情中的学生列表）
+     */
+    @TableField(exist = false)
+    private Integer progress;
 }

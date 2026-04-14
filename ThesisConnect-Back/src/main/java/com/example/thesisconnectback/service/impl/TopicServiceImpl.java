@@ -13,9 +13,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
- * 课题服务实现类
+ *  Topic service implementation class
  */
 @Service
 public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements TopicService {
@@ -84,11 +85,9 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
     public Map<String, Object> getTopicStats() {
         Map<String, Object> stats = new HashMap<>();
         
-        // 总课题数
         long totalTopics = count();
         stats.put("totalTopics", totalTopics);
         
-        // 各状态课题数
         List<Topic> activeTopics = findByStatus("active");
         List<Topic> completedTopics = findByStatus("completed");
         List<Topic> pausedTopics = findByStatus("paused");
@@ -97,7 +96,6 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
         stats.put("completedTopics", completedTopics.size());
         stats.put("pausedTopics", pausedTopics.size());
         
-        // 各难度课题数
         List<Topic> easyTopics = findByDifficulty("easy");
         List<Topic> mediumTopics = findByDifficulty("medium");
         List<Topic> hardTopics = findByDifficulty("hard");
@@ -106,7 +104,6 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
         stats.put("mediumTopics", mediumTopics.size());
         stats.put("hardTopics", hardTopics.size());
         
-        // 计算课题增长率（本月新增课题数 / 上月新增课题数）
         long currentMonthTopics = getCurrentMonthTopicCount();
         long lastMonthTopics = getLastMonthTopicCount();
         double topicGrowth = lastMonthTopics > 0 ? ((double)(currentMonthTopics - lastMonthTopics) / lastMonthTopics) * 100 : 0;
@@ -127,26 +124,24 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
     public Map<String, Object> getTopicDifficultyDistribution() {
         Map<String, Object> distributionData = new HashMap<>();
         
-        // 获取各难度课题数量
         List<Topic> easyTopics = findByDifficulty("easy");
         List<Topic> mediumTopics = findByDifficulty("medium");
         List<Topic> hardTopics = findByDifficulty("hard");
         
-        // 构建饼图数据
         List<Map<String, Object>> pieData = new ArrayList<>();
         
         Map<String, Object> easyData = new HashMap<>();
-        easyData.put("name", "简单");
+        easyData.put("name", "Easy");
         easyData.put("value", easyTopics.size());
         pieData.add(easyData);
         
         Map<String, Object> mediumData = new HashMap<>();
-        mediumData.put("name", "中等");
+        mediumData.put("name", "Medium");
         mediumData.put("value", mediumTopics.size());
         pieData.add(mediumData);
         
         Map<String, Object> hardData = new HashMap<>();
-        hardData.put("name", "困难");
+        hardData.put("name", "Hard");
         hardData.put("value", hardTopics.size());
         pieData.add(hardData);
         
@@ -160,13 +155,11 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
     public Map<String, Object> getTopicStatsByTeacher(Long teacherId) {
         Map<String, Object> stats = new HashMap<>();
         
-        // 获取该教师的总课题数
         QueryWrapper<Topic> totalQuery = new QueryWrapper<>();
         totalQuery.eq("teacher_id", teacherId).eq("deleted", 0);
         long totalTopics = count(totalQuery);
         stats.put("totalTopics", totalTopics);
         
-        // 各状态课题数
         QueryWrapper<Topic> activeQuery = new QueryWrapper<>();
         activeQuery.eq("teacher_id", teacherId).eq("status", "active").eq("deleted", 0);
         long activeTopics = count(activeQuery);
@@ -183,7 +176,6 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
         stats.put("completedTopics", completedTopics);
         stats.put("pausedTopics", pausedTopics);
         
-        // 各难度课题数
         QueryWrapper<Topic> easyQuery = new QueryWrapper<>();
         easyQuery.eq("teacher_id", teacherId).eq("difficulty", "easy").eq("deleted", 0);
         long easyTopics = count(easyQuery);
@@ -200,7 +192,6 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
         stats.put("mediumTopics", mediumTopics);
         stats.put("hardTopics", hardTopics);
         
-        // 计算已选学生总数
         QueryWrapper<Topic> studentsQuery = new QueryWrapper<>();
         studentsQuery.eq("teacher_id", teacherId).eq("deleted", 0);
         List<Topic> teacherTopics = list(studentsQuery);
@@ -209,7 +200,6 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
                 .sum();
         stats.put("totalStudents", totalStudents);
         
-        // 计算平均评分
         double avgRating = teacherTopics.stream()
                 .filter(topic -> topic.getRating() != null && topic.getRating() > 0)
                 .mapToDouble(Topic::getRating)
@@ -217,7 +207,6 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
                 .orElse(0.0);
         stats.put("avgRating", Math.round(avgRating * 10.0) / 10.0);
         
-        // 计算总浏览量
         int totalViews = teacherTopics.stream()
                 .mapToInt(topic -> topic.getViewCount() != null ? topic.getViewCount() : 0)
                 .sum();
@@ -226,9 +215,6 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
         return stats;
     }
     
-    /**
-     * 获取本月新增课题数
-     */
     private long getCurrentMonthTopicCount() {
         QueryWrapper<Topic> queryWrapper = new QueryWrapper<>();
         queryWrapper.apply("DATE_FORMAT(create_time, '%Y-%m') = DATE_FORMAT(NOW(), '%Y-%m')")
@@ -236,13 +222,29 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
         return count(queryWrapper);
     }
     
-    /**
-     * 获取上月新增课题数
-     */
     private long getLastMonthTopicCount() {
         QueryWrapper<Topic> queryWrapper = new QueryWrapper<>();
         queryWrapper.apply("DATE_FORMAT(create_time, '%Y-%m') = DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 1 MONTH), '%Y-%m')")
                    .eq("deleted", 0);
         return count(queryWrapper);
+    }
+
+    @Override
+    public List<Map<String, Object>> getRecentTopics(int limit) {
+        QueryWrapper<Topic> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("deleted", 0)
+                   .orderByDesc("create_time")
+                   .last("LIMIT " + limit);
+        List<Topic> topics = list(queryWrapper);
+        return topics.stream().map(topic -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", topic.getId());
+            map.put("title", topic.getTitle());
+            map.put("teacher_id", topic.getTeacherId());
+            map.put("teacher_name", topic.getTeacherName());
+            map.put("difficulty", topic.getDifficulty());
+            map.put("create_time", topic.getCreateTime());
+            return map;
+        }).collect(Collectors.toList());
     }
 }

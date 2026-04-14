@@ -97,7 +97,8 @@
         <div class="header-right">
           <el-dropdown @command="handleCommand">
             <div class="user-info">
-              <img src="@/assets/vnollx.jpg" alt="头像" class="avatar">
+              <img v-if="avatar" :src="avatar" alt="头像" class="avatar">
+              <img v-else src="@/assets/vnollx.jpg" alt="avatar" class="avatar">
               <span class="username">{{ username }}</span>
               <i class="el-icon-arrow-down"></i>
             </div>
@@ -128,6 +129,7 @@ export default {
       isCollapse: false,
       userRole: this.getUserRoleFromRoute(),
       username: '用户',
+      avatar: '',
       breadcrumbList: []
     }
   },
@@ -179,6 +181,7 @@ export default {
         const response = await authApi.getUserInfo();
         if (response.code === 200 && response.data) {
           this.username = response.data.realName || response.data.username || '用户';
+          this.avatar = response.data.avatar || '';
         }
       } catch (error) {
         console.error('获取用户信息失败:', error);

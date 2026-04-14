@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.thesisconnectback.common.Result;
 import com.example.thesisconnectback.entity.Topic;
 import com.example.thesisconnectback.entity.User;
+import com.example.thesisconnectback.entity.Selection;
+import com.example.thesisconnectback.service.SelectionService;
 import com.example.thesisconnectback.service.TopicService;
 import com.example.thesisconnectback.service.UserService;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +31,8 @@ public class TopicController {
     private TopicService topicService;
     @Autowired
     private UserService userService;
+    @Autowired
+    private SelectionService selectionService;
 
     /**
      * 获取课题列表（分页）
@@ -89,6 +93,11 @@ public class TopicController {
             if (topic != null) {
                 // 增加浏览量
                 topicService.incrementViewCount(id);
+
+                // 获取选择该课题的学生列表
+                List<User> students = selectionService.getStudentsByTopicId(id);
+                topic.setStudents(students);
+
                 return Result.success(topic);
             } else {
                 return Result.notFound("课题不存在");

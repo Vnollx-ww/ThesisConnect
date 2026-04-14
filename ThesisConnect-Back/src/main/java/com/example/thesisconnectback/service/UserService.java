@@ -88,4 +88,9 @@ public interface UserService extends IService<User> {
      * 根据教师获取学生统计信息
      */
     Map<String, Object> getStudentStatsByTeacher(Long teacherId);
+
+    /**
+     * Get recent users
+     */
+    List<Map<String, Object>> getRecentUsers(int limit);
 }

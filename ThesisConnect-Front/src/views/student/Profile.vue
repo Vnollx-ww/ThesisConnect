@@ -275,6 +275,7 @@
 
 <script>
 import { authApi, userApi, fileApi } from '@/api'
+import { exportToExcel } from '@/utils/export'
 
 export default {
   name: 'StudentProfile',
@@ -547,7 +548,21 @@ export default {
     },
 
     exportData() {
-      this.$message.info('数据导出功能开发中...');
+      const exportData = [
+        { 'Field': 'Username', 'Value': this.userInfo.username },
+        { 'Field': 'Real Name', 'Value': this.userInfo.name },
+        { 'Field': 'Email', 'Value': this.userInfo.email },
+        { 'Field': 'Phone', 'Value': this.userInfo.phone },
+        { 'Field': 'Department', 'Value': this.userInfo.department || '' },
+        { 'Field': 'Major', 'Value': this.userInfo.major || '' },
+        { 'Field': 'Class', 'Value': this.userInfo.className || '' },
+        { 'Field': 'Student ID', 'Value': this.userInfo.studentId || '' },
+        { 'Field': 'Gender', 'Value': this.userInfo.gender || '' },
+        { 'Field': 'Birthday', 'Value': this.userInfo.birthday || '' }
+      ]
+      const fileName = `Student_Profile_${this.userInfo.username}_${new Date().toISOString().slice(0, 10)}.xlsx`
+      exportToExcel(exportData, 'Profile', fileName)
+      this.$message.success('导出成功')
     }
   }
 }

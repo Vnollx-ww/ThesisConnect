@@ -158,9 +158,9 @@ public class SelectionController {
                 return Result.forbidden("权限不足");
             }
 
-            // 只有待审核或已拒绝状态可以取消/删除
-            if (!"pending".equals(selection.getStatus()) && !"rejected".equals(selection.getStatus())) {
-                return Result.error("只有待审核或已拒绝状态的选题可以取消或删除");
+            // 只有待审核、已通过待确认或已拒绝状态可以取消/删除
+            if (!"pending".equals(selection.getStatus()) && !"approved".equals(selection.getStatus()) && !"rejected".equals(selection.getStatus())) {
+                return Result.error("只有待审核、已通过待确认或已拒绝状态的选题可以取消或删除");
             }
 
             boolean success = selectionService.cancelSelection(id);

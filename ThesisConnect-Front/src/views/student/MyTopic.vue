@@ -126,7 +126,7 @@
               <el-button 
                 icon="el-icon-close"
                 @click="cancelApplication(app)">
-                拒绝申请
+                放弃选题
               </el-button>
             </div>
           </div>
@@ -1026,9 +1026,9 @@ export default {
       })
     },
     
-    // 拒绝申请（学生拒绝选题）
+    // 放弃已通过但尚未最终确认的选题
     async cancelApplication(app) {
-      this.$confirm('确定要拒绝这个选题吗？拒绝后将无法再选择。', '确认拒绝', {
+      this.$confirm('确定要放弃这个已通过的选题吗？放弃后将删除本次申请记录。', '确认放弃', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning'
@@ -1037,14 +1037,14 @@ export default {
           // 调用后端接口，删除或取消该申请
           const response = await selectionApi.cancelSelection(app.id)
           if (response.code === 200) {
-            this.$message.success('已拒绝该选题')
+            this.$message.success('已放弃该选题')
             // 重新加载数据
             await this.loadMyTopicData()
           } else {
             this.$message.error(response.message || '操作失败')
           }
         } catch (error) {
-          console.error('拒绝申请失败:', error)
+          console.error('放弃选题失败:', error)
           this.$message.error('操作失败，请稍后重试')
         }
       })

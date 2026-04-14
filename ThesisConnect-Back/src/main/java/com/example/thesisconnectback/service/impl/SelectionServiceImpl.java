@@ -17,6 +17,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 选题记录服务实现类
@@ -116,8 +117,8 @@ public class SelectionServiceImpl extends ServiceImpl<SelectionMapper, Selection
     @Transactional
     public boolean cancelSelection(Long selectionId) {
         Selection selection = getById(selectionId);
-        // 允许撤销待审核的申请，或删除已拒绝的记录
-        if (selection != null && ("pending".equals(selection.getStatus()) || "rejected".equals(selection.getStatus()))) {
+        // 允许撤销待审核、已通过待确认的申请，或删除已拒绝的记录
+        if (selection != null && ("pending".equals(selection.getStatus()) || "approved".equals(selection.getStatus()) || "rejected".equals(selection.getStatus()))) {
             Long topicId = selection.getTopicId();
             boolean removed = removeById(selectionId);
             
@@ -218,6 +219,11 @@ public class SelectionServiceImpl extends ServiceImpl<SelectionMapper, Selection
     }
 
     @Override
+    public List<User> getStudentsByTopicId(Long topicId) {
+        return selectionMapper.findStudentsByTopicId(topicId);
+    }
+
+    @Override
     public Map<String, Object> getSelectionStats() {
         Map<String, Object> stats = new HashMap<>();
         
@@ -311,5 +317,29 @@ public class SelectionServiceImpl extends ServiceImpl<SelectionMapper, Selection
         long completed = count(completedQuery);
         
         return total > 0 ? ((double)completed / total) * 100 : 0;
+    }
+
+    /**
+     * Get recent selections
+     */
+    @Override
+    public List<Map<String, Object>> getRecentSelections(int limit) {
+        QueryWrapper<Selection> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("deleted", 0)
+                   .orderByDesc("create_time")
+                   .last("LIMIT " + limit);
+        List<Selection> selections = list(queryWrapper);
+        return selections.stream().map(selection -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", selection.getId());
+            map.put("student_id", selection.getStudentId());
+            map.put("student_name", selection.getStudentName());
+            map.put("student_number", selection.getStudentNumber());
+            map.put("topic_id", selection.getTopicId());
+            map.put("topic_title", selection.getTopicTitle());
+            map.put("status", selection.getStatus());
+            map.put("create_time", selection.getCreateTime());
+            return map;
+        }).collect(Collectors.toList());
     }
 }

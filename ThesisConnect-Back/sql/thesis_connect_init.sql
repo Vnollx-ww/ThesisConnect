@@ -16,6 +16,12 @@ CREATE TABLE IF NOT EXISTS sys_user (
     department VARCHAR(100) COMMENT '部门/专业',
     student_id VARCHAR(50) COMMENT '学号/工号',
     avatar VARCHAR(255) COMMENT '头像',
+    gender VARCHAR(20) COMMENT '性别',
+    birthday VARCHAR(20) COMMENT '生日',
+    address VARCHAR(255) COMMENT '地址',
+    major VARCHAR(100) COMMENT '专业',
+    class_name VARCHAR(100) COMMENT '班级名称',
+    title VARCHAR(100) COMMENT '职称/职位',
     status INT NOT NULL DEFAULT 1 COMMENT '状态：0-禁用，1-正常',
     last_login_time DATETIME COMMENT '最后登录时间',
     login_count INT DEFAULT 0 COMMENT '登录次数',
@@ -72,6 +78,7 @@ CREATE TABLE IF NOT EXISTS sys_selection (
     progress_description TEXT COMMENT '进度描述',
     problems TEXT COMMENT '遇到的问题',
     final_grade VARCHAR(10) COMMENT '最终成绩',
+    teacher_evaluation TEXT COMMENT '教师评价',
     create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     deleted INT NOT NULL DEFAULT 0 COMMENT '逻辑删除：0-未删除，1-已删除',
@@ -131,6 +138,9 @@ CREATE TABLE IF NOT EXISTS sys_progress (
     milestone_description TEXT COMMENT '里程碑描述',
     milestone_status VARCHAR(20) DEFAULT 'pending' COMMENT '里程碑状态：completed-已完成，current-进行中，pending-待开始',
     milestone_date DATETIME COMMENT '里程碑日期',
+    report_url VARCHAR(500) COMMENT '报告文档URL',
+    status VARCHAR(20) DEFAULT 'pending' COMMENT '审核状态：pending-待审核，approved-已通过，rejected-已拒绝',
+    reject_reason TEXT COMMENT '拒绝原因',
     create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     deleted INT NOT NULL DEFAULT 0 COMMENT '逻辑删除：0-未删除，1-已删除',
@@ -165,20 +175,20 @@ CREATE TABLE IF NOT EXISTS sys_log (
 -- 插入初始数据
 -- 插入管理员用户
 INSERT INTO sys_user (username, password, real_name, email, phone, role, department, student_id, status) VALUES
-('admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVEFDi', '系统管理员', 'admin@thesisconnect.com', '13800000000', 'admin', '系统管理部', 'ADMIN001', 1);
+('admin', '$2a$10$w/hSQQWocbBBYaSNIXwEfOlsfeHUyITohDABySIxDRUWpic8gbHci', '系统管理员', 'admin@thesisconnect.com', '13800000000', 'admin', '系统管理部', 'ADMIN001', 1);
 
 -- 插入教师用户
 INSERT INTO sys_user (username, password, real_name, email, phone, role, department, student_id, status) VALUES
-('teacher001', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVEFDi', '李教授', 'li.professor@university.edu.cn', '13800000001', 'teacher', '计算机科学与技术学院', 'T2021001', 1),
-('teacher002', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVEFDi', '王老师', 'wang.teacher@university.edu.cn', '13800000002', 'teacher', '软件工程学院', 'T2021002', 1),
-('teacher003', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVEFDi', '张教授', 'zhang.professor@university.edu.cn', '13800000003', 'teacher', '网络工程学院', 'T2021003', 1);
+('teacher001', '$2a$10$w/hSQQWocbBBYaSNIXwEfOlsfeHUyITohDABySIxDRUWpic8gbHci', '李教授', 'li.professor@university.edu.cn', '13800000001', 'teacher', '计算机科学与技术学院', 'T2021001', 1),
+('teacher002', '$2a$10$w/hSQQWocbBBYaSNIXwEfOlsfeHUyITohDABySIxDRUWpic8gbHci', '王老师', 'wang.teacher@university.edu.cn', '13800000002', 'teacher', '软件工程学院', 'T2021002', 1),
+('teacher003', '$2a$10$w/hSQQWocbBBYaSNIXwEfOlsfeHUyITohDABySIxDRUWpic8gbHci', '张教授', 'zhang.professor@university.edu.cn', '13800000003', 'teacher', '网络工程学院', 'T2021003', 1);
 
 -- 插入学生用户
 INSERT INTO sys_user (username, password, real_name, email, phone, role, department, student_id, status) VALUES
-('student001', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVEFDi', '张三', 'zhangsan@student.edu.cn', '13800000004', 'student', '计算机科学与技术', '2021001001', 1),
-('student002', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVEFDi', '李四', 'lisi@student.edu.cn', '13800000005', 'student', '软件工程', '2021001002', 1),
-('student003', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVEFDi', '王五', 'wangwu@student.edu.cn', '13800000006', 'student', '网络工程', '2021001003', 1),
-('student004', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKTVEFDi', '赵六', 'zhaoliu@student.edu.cn', '13800000007', 'student', '信息安全', '2021001004', 1);
+('student001', '$2a$10$w/hSQQWocbBBYaSNIXwEfOlsfeHUyITohDABySIxDRUWpic8gbHci', '张三', 'zhangsan@student.edu.cn', '13800000004', 'student', '计算机科学与技术', '2021001001', 1),
+('student002', '$2a$10$w/hSQQWocbBBYaSNIXwEfOlsfeHUyITohDABySIxDRUWpic8gbHci', '李四', 'lisi@student.edu.cn', '13800000005', 'student', '软件工程', '2021001002', 1),
+('student003', '$2a$10$w/hSQQWocbBBYaSNIXwEfOlsfeHUyITohDABySIxDRUWpic8gbHci', '王五', 'wangwu@student.edu.cn', '13800000006', 'student', '网络工程', '2021001003', 1),
+('student004', '$2a$10$w/hSQQWocbBBYaSNIXwEfOlsfeHUyITohDABySIxDRUWpic8gbHci', '赵六', 'zhaoliu@student.edu.cn', '13800000007', 'student', '信息安全', '2021001004', 1);
 
 -- 插入示例课题
 INSERT INTO sys_topic (title, description, teacher_id, teacher_name, major, difficulty, max_students, requirements, expected_outcome, deadline, status) VALUES
@@ -189,32 +199,6 @@ INSERT INTO sys_topic (title, description, teacher_id, teacher_name, major, diff
 ('学生成绩管理系统', '开发一个学生成绩管理系统，支持成绩录入、查询、统计等功能。', 3, '王老师', '软件工程', 'easy', 4, '熟悉数据库操作,了解Web开发,有系统设计能力', '完成一个功能完整的管理系统。', '2024-07-01 23:59:59', 'active'),
 ('移动端健康管理应用', '开发一个移动端健康管理应用，帮助用户记录和管理健康数据。', 4, '张教授', '计算机科学与技术', 'medium', 3, '熟悉移动开发,了解健康数据管理,有UI设计能力', '完成一个可用的移动应用。', '2024-07-05 23:59:59', 'active');
 
--- 插入示例选题记录
-INSERT INTO sys_selection (student_id, student_name, student_number, topic_id, topic_title, teacher_id, teacher_name, selection_time, status, progress) VALUES
-(5, '张三', '2021001001', 1, '基于深度学习的图像识别系统', 2, '李教授', '2024-01-15 10:30:00', 'approved', 35),
-(6, '李四', '2021001002', 2, '校园二手交易平台设计与实现', 3, '王老师', '2024-01-20 14:20:00', 'approved', 20),
-(7, '王五', '2021001003', 3, '智能家居控制系统', 4, '张教授', '2024-01-25 09:15:00', 'pending', 0);
-
--- 插入示例进度记录
-INSERT INTO sys_progress (selection_id, student_id, student_name, topic_id, percentage, description, milestone_title, milestone_description, milestone_status, milestone_date) VALUES
-(1, 5, '张三', 1, 35, '已完成需求分析和技术调研，正在进行系统设计', '需求分析', '完成系统需求分析和功能设计', 'completed', '2024-01-20 00:00:00'),
-(1, 5, '张三', 1, 35, '已完成需求分析和技术调研，正在进行系统设计', '技术调研', '调研相关技术和算法', 'completed', '2024-02-01 00:00:00'),
-(1, 5, '张三', 1, 35, '已完成需求分析和技术调研，正在进行系统设计', '系统设计', '完成系统架构设计和数据库设计', 'current', '2024-02-15 00:00:00'),
-(2, 6, '李四', 2, 20, '正在进行需求分析和系统设计', '需求分析', '完成系统需求分析和功能设计', 'completed', '2024-01-25 00:00:00'),
-(2, 6, '李四', 2, 20, '正在进行需求分析和系统设计', '系统设计', '完成系统架构设计和数据库设计', 'current', '2024-02-10 00:00:00');
-
--- 插入示例文档
-INSERT INTO sys_document (name, original_name, type, size, path, extension, uploader_id, uploader_name, selection_id, topic_id, status, download_count) VALUES
-('需求分析文档.docx', '需求分析文档.docx', '需求文档', 2350000, '/uploads/documents/req_analysis_001.docx', 'docx', 5, '张三', 1, 1, 'approved', 3),
-('系统设计文档.pdf', '系统设计文档.pdf', '设计文档', 5120000, '/uploads/documents/sys_design_001.pdf', 'pdf', 5, '张三', 1, 1, 'pending', 1),
-('技术调研报告.docx', '技术调研报告.docx', '调研报告', 3200000, '/uploads/documents/tech_research_001.docx', 'docx', 5, '张三', 1, 1, 'approved', 2);
-
--- 插入示例系统日志
-INSERT INTO sys_log (user_id, username, operation, description, method, params, time, ip, user_agent) VALUES
-(5, 'student001', 'LOGIN', '用户登录系统', 'POST', '{"username":"student001"}', 150, '192.168.1.100', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'),
-(5, 'student001', 'SELECT_TOPIC', '选择课题', 'POST', '{"topicId":1}', 200, '192.168.1.100', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'),
-(2, 'teacher001', 'PUBLISH_TOPIC', '发布课题', 'POST', '{"title":"基于深度学习的图像识别系统"}', 300, '192.168.1.101', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'),
-(1, 'admin', 'MANAGE_USER', '管理用户', 'GET', '{"page":1,"size":10}', 100, '192.168.1.102', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
 
 -- 创建视图：课题统计视图
 CREATE VIEW v_topic_stats AS

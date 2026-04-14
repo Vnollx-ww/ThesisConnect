@@ -11,8 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 系统统计控制器
@@ -260,6 +260,71 @@ public class StatsController {
         } catch (Exception e) {
             log.error("获取教师课题统计失败：", e);
             return Result.error("获取教师课题统计失败");
+        }
+    }
+
+    /**
+     * Get recent activities
+     */
+    @GetMapping("/recent-activities")
+    public Result<List<Map<String, Object>>> getRecentActivities(HttpServletRequest request) {
+        try {
+            String role = (String) request.getAttribute("role");
+            if (!"admin".equals(role)) {
+                return Result.forbidden("Insufficient permissions");
+            }
+
+            List<Map<String, Object>> activities = new ArrayList<>();
+
+            // Get recent user registrations
+            List<Map<String, Object>> recentUsers = userService.getRecentUsers(5);
+            for (Map<String, Object> user : recentUsers) {
+                Map<String, Object> activity = new HashMap<>();
+                activity.put("title", "New user registration");
+                activity.put("description", user.get("real_name") + " registered an account");
+                activity.put("time", user.get("create_time"));
+                activity.put("type", "user");
+                activities.add(activity);
+            }
+
+            // Get recent topics
+            List<Map<String, Object>> recentTopics = topicService.getRecentTopics(5);
+            for (Map<String, Object> topic : recentTopics) {
+                Map<String, Object> activity = new HashMap<>();
+                activity.put("title", "Topic published");
+                activity.put("description", topic.get("teacher_name") + " published new topic \"" + topic.get("title") + "\"");
+                activity.put("time", topic.get("create_time"));
+                activity.put("type", "topic");
+                activities.add(activity);
+            }
+
+            // Get recent selections
+            List<Map<String, Object>> recentSelections = selectionService.getRecentSelections(5);
+            for (Map<String, Object> selection : recentSelections) {
+                Map<String, Object> activity = new HashMap<>();
+                activity.put("title", "Topic selection successful");
+                activity.put("description", selection.get("student_name") + " selected topic \"" + selection.get("topic_title") + "\"");
+                activity.put("time", selection.get("create_time"));
+                activity.put("type", "selection");
+                activities.add(activity);
+            }
+
+            // Sort by time descending and take top 10
+            List<Map<String, Object>> result = activities.stream()
+                    .sorted((a, b) -> {
+                        Object timeA = a.get("time");
+                        Object timeB = b.get("time");
+                        if (timeA == null) return 1;
+                        if (timeB == null) return -1;
+                        return timeB.toString().compareTo(timeA.toString());
+                    })
+                    .limit(10)
+                    .collect(Collectors.toList());
+
+            return Result.success(result);
+        } catch (Exception e) {
+            log.error("Get recent activities failed: ", e);
+            return Result.error("Failed to get recent activities");
         }
     }
 }

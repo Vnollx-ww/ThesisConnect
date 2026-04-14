@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 用户服务实现类
@@ -269,5 +270,26 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         queryWrapper.apply("DATE_FORMAT(create_time, '%Y-%m') = DATE_FORMAT(DATE_SUB(NOW(), INTERVAL 1 MONTH), '%Y-%m')")
                    .eq("deleted", 0);
         return count(queryWrapper);
+    }
+
+    /**
+     * Get recent users
+     */
+    @Override
+    public List<Map<String, Object>> getRecentUsers(int limit) {
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("deleted", 0)
+                   .orderByDesc("create_time")
+                   .last("LIMIT " + limit);
+        List<User> users = list(queryWrapper);
+        return users.stream().map(user -> {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", user.getId());
+            map.put("username", user.getUsername());
+            map.put("real_name", user.getRealName());
+            map.put("role", user.getRole());
+            map.put("create_time", user.getCreateTime());
+            return map;
+        }).collect(Collectors.toList());
     }
 }

@@ -572,6 +572,7 @@
 
 <script>
 import { userApi, progressApi, selectionApi } from '@/api'
+import { exportToExcel } from '@/utils/export'
 
 export default {
   name: 'TeacherStudents',
@@ -865,7 +866,24 @@ export default {
     },
     
     exportStudents() {
-      this.$message.info('学生数据导出功能开发中...');
+      if (!this.students || this.students.length === 0) {
+        this.$message.warning('没有可导出的数据')
+        return
+      }
+      const exportData = this.students.map(student => ({
+        'Name': student.realName,
+        'Student ID': student.studentId,
+        'Email': student.email,
+        'Phone': student.phone,
+        'Department': student.department || '',
+        'Topic': student.topicTitle || 'Not selected',
+        'Status': this.getStatusText(student.selectionStatus),
+        'Progress': student.progress !== undefined ? student.progress + '%' : 'N/A',
+        'Teacher': student.teacherName || 'N/A'
+      }))
+      const fileName = `Students_${new Date().toISOString().slice(0, 10)}.xlsx`
+      exportToExcel(exportData, 'Students', fileName)
+      this.$message.success('导出成功')
     },
     
     getStatusType(status) {

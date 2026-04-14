@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 课题实体类
@@ -122,4 +123,10 @@ public class Topic {
     @TableLogic
     @TableField("deleted")
     private Integer deleted;
+
+    /**
+     * 选择该课题的学生列表（非数据库字段）
+     */
+    @TableField(exist = false)
+    private List<User> students;
 }

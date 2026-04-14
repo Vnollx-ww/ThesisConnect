@@ -2,6 +2,7 @@ package com.example.thesisconnectback.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.thesisconnectback.entity.Selection;
+import com.example.thesisconnectback.entity.User;
 
 import java.util.List;
 import java.util.Map;
@@ -75,4 +76,14 @@ public interface SelectionService extends IService<Selection> {
      * 获取选题统计信息
      */
     Map<String, Object> getSelectionStats();
+
+    /**
+     * 根据课题ID获取学生列表
+     */
+    List<User> getStudentsByTopicId(Long topicId);
+
+    /**
+     * Get recent selections
+     */
+    List<Map<String, Object>> getRecentSelections(int limit);
 }

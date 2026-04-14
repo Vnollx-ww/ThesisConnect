@@ -105,91 +105,6 @@
       </el-col>
     </el-row>
     
-    <!-- 系统状态 -->
-    <div class="system-status">
-      <div class="section-header">
-        <h3>系统状态</h3>
-        <el-button type="primary" size="small" @click="refreshSystemStatus">刷新状态</el-button>
-      </div>
-      
-      <el-row :gutter="20">
-        <el-col :span="8">
-          <div class="status-card">
-            <div class="status-header">
-              <h4>服务器状态</h4>
-              <el-tag :type="systemStatus.server === 'normal' ? 'success' : 'danger'" size="small">
-                {{ systemStatus.server === 'normal' ? '正常' : '异常' }}
-              </el-tag>
-            </div>
-            <div class="status-content">
-              <div class="status-item">
-                <span>CPU使用率：</span>
-                <span>{{ systemStatus.cpu }}%</span>
-              </div>
-              <div class="status-item">
-                <span>内存使用率：</span>
-                <span>{{ systemStatus.memory }}%</span>
-              </div>
-              <div class="status-item">
-                <span>磁盘使用率：</span>
-                <span>{{ systemStatus.disk }}%</span>
-              </div>
-            </div>
-          </div>
-        </el-col>
-        
-        <el-col :span="8">
-          <div class="status-card">
-            <div class="status-header">
-              <h4>数据库状态</h4>
-              <el-tag :type="systemStatus.database === 'normal' ? 'success' : 'danger'" size="small">
-                {{ systemStatus.database === 'normal' ? '正常' : '异常' }}
-              </el-tag>
-            </div>
-            <div class="status-content">
-              <div class="status-item">
-                <span>连接数：</span>
-                <span>{{ systemStatus.dbConnections }}</span>
-              </div>
-              <div class="status-item">
-                <span>查询响应时间：</span>
-                <span>{{ systemStatus.queryTime }}ms</span>
-              </div>
-              <div class="status-item">
-                <span>存储空间：</span>
-                <span>{{ systemStatus.dbStorage }}</span>
-              </div>
-            </div>
-          </div>
-        </el-col>
-        
-        <el-col :span="8">
-          <div class="status-card">
-            <div class="status-header">
-              <h4>网络状态</h4>
-              <el-tag :type="systemStatus.network === 'normal' ? 'success' : 'danger'" size="small">
-                {{ systemStatus.network === 'normal' ? '正常' : '异常' }}
-              </el-tag>
-            </div>
-            <div class="status-content">
-              <div class="status-item">
-                <span>在线用户：</span>
-                <span>{{ systemStatus.onlineUsers }}</span>
-              </div>
-              <div class="status-item">
-                <span>今日访问量：</span>
-                <span>{{ systemStatus.dailyVisits }}</span>
-              </div>
-              <div class="status-item">
-                <span>平均响应时间：</span>
-                <span>{{ systemStatus.responseTime }}ms</span>
-              </div>
-            </div>
-          </div>
-        </el-col>
-      </el-row>
-    </div>
-    
     <!-- 最近活动 -->
     <div class="recent-activities">
       <div class="section-header">
@@ -277,6 +192,7 @@
 
 <script>
 import { statsApi } from '@/api'
+import { exportToExcel } from '@/utils/export'
 
 export default {
   name: 'AdminDashboard',
@@ -308,54 +224,8 @@ export default {
         pieData: [],
         total: 0
       },
-      
-      systemStatus: {
-        server: 'normal',
-        cpu: 45,
-        memory: 62,
-        disk: 38,
-        database: 'normal',
-        dbConnections: 156,
-        queryTime: 12,
-        dbStorage: '2.3GB',
-        network: 'normal',
-        onlineUsers: 89,
-        dailyVisits: 1234,
-        responseTime: 85
-      },
-      
-      recentActivities: [
-        {
-          title: '新用户注册',
-          description: '学生张三注册了账户',
-          time: '2024-02-15 14:30',
-          type: 'user'
-        },
-        {
-          title: '课题发布',
-          description: '李教授发布了新课题"基于AI的智能推荐系统"',
-          time: '2024-02-15 13:45',
-          type: 'topic'
-        },
-        {
-          title: '选题成功',
-          description: '王五选择了课题"校园二手交易平台"',
-          time: '2024-02-15 12:20',
-          type: 'selection'
-        },
-        {
-          title: '系统维护',
-          description: '系统进行了定期维护，运行正常',
-          time: '2024-02-15 10:00',
-          type: 'system'
-        },
-        {
-          title: '文档上传',
-          description: '学生李四上传了需求分析文档',
-          time: '2024-02-15 09:15',
-          type: 'document'
-        }
-      ]
+
+      recentActivities: []
     }
   },
   computed: {
@@ -464,6 +334,7 @@ export default {
   async mounted() {
     await this.loadDashboardData();
     await this.loadChartData();
+    await this.loadRecentActivities();
   },
   methods: {
     // 加载仪表板数据
@@ -526,11 +397,19 @@ export default {
         this.$message.error('加载课题难度分布失败，请稍后重试');
       }
     },
-    
-    refreshSystemStatus() {
-      this.$message.success('系统状态已刷新');
+
+    // Load recent activities
+    async loadRecentActivities() {
+      try {
+        const response = await statsApi.getRecentActivities();
+        if (response.code === 200 && response.data) {
+          this.recentActivities = response.data;
+        }
+      } catch (error) {
+        console.error('Load recent activities failed:', error);
+      }
     },
-    
+
     viewAllActivities() {
       this.$message.info('查看全部活动功能开发中...');
     },
@@ -548,7 +427,19 @@ export default {
     },
     
     exportSystemData() {
-      this.$message.info('数据导出功能开发中...');
+      const exportData = [
+        { 'Metric': 'Total Users', 'Value': this.metrics.totalUsers },
+        { 'Metric': 'Total Topics', 'Value': this.metrics.totalTopics },
+        { 'Metric': 'Total Selections', 'Value': this.metrics.totalSelections },
+        { 'Metric': 'Active Selections', 'Value': this.metrics.activeSelections },
+        { 'Metric': 'Completed Selections', 'Value': this.metrics.completedSelections },
+        { 'Metric': 'Pending Selections', 'Value': this.metrics.pendingSelections },
+        { 'Metric': 'Total Documents', 'Value': this.metrics.totalDocuments },
+        { 'Metric': 'Pending Documents', 'Value': this.metrics.pendingDocuments }
+      ]
+      const fileName = `System_Stats_${new Date().toISOString().slice(0, 10)}.xlsx`
+      exportToExcel(exportData, 'System Stats', fileName)
+      this.$message.success('导出成功')
     },
     
     getActivityType(type) {

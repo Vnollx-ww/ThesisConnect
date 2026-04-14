@@ -2,6 +2,7 @@ package com.example.thesisconnectback.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.example.thesisconnectback.entity.Selection;
+import com.example.thesisconnectback.entity.User;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
@@ -79,4 +80,14 @@ public interface SelectionMapper extends BaseMapper<Selection> {
      */
     @Select("SELECT teacher_id, teacher_name, COUNT(*) as count FROM sys_selection WHERE deleted = 0 GROUP BY teacher_id, teacher_name")
     List<Object> countByTeacher();
+
+    /**
+     * 根据课题ID获取学生列表（包含进度信息）
+     */
+    @Select("SELECT u.id, u.username, u.real_name as name, u.student_id as studentId, " +
+            "u.phone, u.email, s.progress " +
+            "FROM sys_user u " +
+            "INNER JOIN sys_selection s ON u.id = s.student_id " +
+            "WHERE s.topic_id = #{topicId} AND s.deleted = 0 AND u.deleted = 0")
+    List<User> findStudentsByTopicId(@Param("topicId") Long topicId);
 }

@@ -283,6 +283,7 @@
 
 <script>
 import { authApi, userApi, fileApi } from '@/api'
+import { exportToExcel } from '@/utils/export'
 
 export default {
   name: 'TeacherProfile',
@@ -555,7 +556,18 @@ export default {
     },
     
     exportData() {
-      this.$message.info('数据导出功能开发中...');
+      const exportData = [
+        { 'Field': 'Username', 'Value': this.userInfo.name },
+        { 'Field': 'Real Name', 'Value': this.userInfo.name },
+        { 'Field': 'Email', 'Value': this.userInfo.email },
+        { 'Field': 'Phone', 'Value': this.userInfo.phone },
+        { 'Field': 'Department', 'Value': this.userInfo.department || '' },
+        { 'Field': 'Title', 'Value': this.userInfo.title || '' },
+        { 'Field': 'Student ID', 'Value': this.userInfo.teacherId || '' }
+      ]
+      const fileName = `Teacher_Profile_${this.userInfo.name}_${new Date().toISOString().slice(0, 10)}.xlsx`
+      exportToExcel(exportData, 'Profile', fileName)
+      this.$message.success('导出成功')
     }
   }
 }

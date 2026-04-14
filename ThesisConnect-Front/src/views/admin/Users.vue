@@ -355,6 +355,7 @@
 
 <script>
 import { userApi } from '@/api/index'
+import { exportToExcel } from '@/utils/export'
 
 export default {
   name: 'AdminUsers',
@@ -649,7 +650,24 @@ export default {
     },
     
     exportUsers() {
-      this.$message.info('用户导出功能开发中...');
+      if (!this.users || this.users.length === 0) {
+        this.$message.warning('没有可导出的数据')
+        return
+      }
+      const exportData = this.users.map(user => ({
+        'Username': user.username,
+        'Real Name': user.realName,
+        'Role': this.getRoleText(user.role),
+        'Email': user.email,
+        'Phone': user.phone,
+        'Department': user.department || '',
+        'Student ID': user.studentId || '',
+        'Status': this.getStatusText(user.status),
+        'Created': user.createTime ? new Date(user.createTime).toLocaleString() : ''
+      }))
+      const fileName = `Users_${new Date().toISOString().slice(0, 10)}.xlsx`
+      exportToExcel(exportData, 'Users', fileName)
+      this.$message.success('导出成功')
     },
     
     importUsers() {

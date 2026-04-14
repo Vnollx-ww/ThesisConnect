@@ -561,10 +561,23 @@ export default {
       }
     },
     
-    viewTopicDetail(topic) {
-      this.selectedTopic = topic;
+    async viewTopicDetail(topic) {
       this.activeTab = 'basic';
       this.detailDialogVisible = true;
+
+      // 调用API获取课题详情（包含学生列表）
+      try {
+        const response = await topicApi.getTopicById(topic.id);
+        if (response.code === 200) {
+          this.selectedTopic = response.data;
+        } else {
+          this.$message.error('获取课题详情失败');
+          this.selectedTopic = topic;
+        }
+      } catch (error) {
+        console.error('获取课题详情失败:', error);
+        this.selectedTopic = topic;
+      }
     },
     
     getRequirementsArray(requirements) {

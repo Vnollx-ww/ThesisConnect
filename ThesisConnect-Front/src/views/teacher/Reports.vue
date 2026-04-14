@@ -232,6 +232,7 @@
 <script>
 import { topicApi, selectionApi, statsApi } from '@/api'
 import { getCurrentUser } from '@/utils/user'
+import { exportToExcel } from '@/utils/export'
 
 export default {
   name: 'TeacherReports',
@@ -547,11 +548,36 @@ export default {
     },
     
     exportReport() {
-      this.$message.info('报表导出功能开发中...')
+      const exportData = [
+        { 'Metric': 'Total Topics', 'Value': this.metrics.totalTopics },
+        { 'Metric': 'Total Students', 'Value': this.metrics.totalStudents },
+        { 'Metric': 'Pending Reviews', 'Value': this.metrics.pendingReviews },
+        { 'Metric': 'Active Selections', 'Value': this.metrics.activeSelections },
+        { 'Metric': 'Completed', 'Value': this.metrics.completedSelections },
+        { 'Metric': 'Average Progress', 'Value': this.metrics.avgProgress ? this.metrics.avgProgress + '%' : 'N/A' }
+      ]
+      const fileName = `Teacher_Report_${new Date().toISOString().slice(0, 10)}.xlsx`
+      exportToExcel(exportData, 'Report', fileName)
+      this.$message.success('导出成功')
     },
     
     exportDetailedData() {
-      this.$message.info('详细数据导出功能开发中...')
+      if (!this.topicStats || this.topicStats.length === 0) {
+        this.$message.warning('没有可导出的数据')
+        return
+      }
+      const exportData = this.topicStats.map(topic => ({
+        'Topic': topic.title,
+        'Selected': topic.selectedCount,
+        'Max': topic.maxStudents,
+        'Pending': topic.pendingCount,
+        'Active': topic.activeCount,
+        'Completed': topic.completedCount,
+        'Avg Progress': topic.avgProgress !== undefined ? topic.avgProgress + '%' : 'N/A'
+      }))
+      const fileName = `Detailed_Data_${new Date().toISOString().slice(0, 10)}.xlsx`
+      exportToExcel(exportData, 'Detailed Data', fileName)
+      this.$message.success('导出成功')
     },
     
     setTrendPeriod(period) {

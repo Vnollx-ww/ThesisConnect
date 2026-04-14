@@ -80,4 +80,9 @@ public interface TopicService extends IService<Topic> {
      * 获取课题难度分布
      */
     Map<String, Object> getTopicDifficultyDistribution();
+
+    /**
+     * Get recent topics
+     */
+    List<Map<String, Object>> getRecentTopics(int limit);
 }
