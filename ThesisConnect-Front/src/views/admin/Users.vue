@@ -309,7 +309,7 @@
           </div>
         </div>
         
-        <el-tabs v-model="activeTab">
+        <el-tabs v-model="activeTab" @tab-click="handleTabClick">
           <el-tab-pane label="基本信息" name="basic">
             <div class="info-content">
               <el-row :gutter="20">
@@ -452,13 +452,6 @@ export default {
   computed: {
     filteredUsers() {
       return this.users;
-    }
-  },
-  watch: {
-    activeTab(newVal) {
-      if (newVal === 'activities' && this.selectedUser && this.selectedUser.id) {
-        this.loadUserActivities();
-      }
     }
   },
   mounted() {
@@ -611,9 +604,15 @@ export default {
     
     viewUserDetail(user) {
       this.selectedUser = user;
-      this.selectedUser.activities = [];
+      this.$set(this.selectedUser, 'activities', []);
       this.activeTab = 'basic';
       this.detailDialogVisible = true;
+    },
+    
+    handleTabClick(tab) {
+      if (tab.name === 'activities' && this.selectedUser && this.selectedUser.id) {
+        this.loadUserActivities();
+      }
     },
     
     async loadUserActivities() {
@@ -621,7 +620,7 @@ export default {
       try {
         const response = await userApi.getUserActivities(this.selectedUser.id);
         if (response.code === 200 && response.data) {
-          this.selectedUser.activities = response.data;
+          this.$set(this.selectedUser, 'activities', response.data);
         }
       } catch (error) {
         console.error('加载用户活动失败:', error);
