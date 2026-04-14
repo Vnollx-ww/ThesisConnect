@@ -708,7 +708,7 @@ export default {
           console.error('修改课题状态失败:', error);
           this.$message.error('状态修改失败');
         }
-      });
+      }).catch(() => {});
     },
     
     async deleteTopic(topic) {
@@ -735,7 +735,7 @@ export default {
             this.$message.error('删除失败');
           }
         }
-      });
+      }).catch(() => {});
     },
     
     async batchOperation() {
@@ -761,7 +761,7 @@ export default {
           console.error('批量删除课题失败:', error);
           this.$message.error('批量删除失败');
         }
-      });
+      }).catch(() => {});
     },
     
     exportTopics() {

@@ -961,7 +961,7 @@ export default {
           console.error('删除文档失败:', error)
           this.$message.error('删除文档失败，请稍后重试')
         }
-      });
+      }).catch(() => {});
     },
     
     goToTopics() {
@@ -1023,7 +1023,7 @@ export default {
           console.error('确认申请失败:', error)
           this.$message.error('确认失败，请稍后重试')
         }
-      })
+      }).catch(() => {});
     },
     
     // 放弃已通过但尚未最终确认的选题
@@ -1047,7 +1047,7 @@ export default {
           console.error('放弃选题失败:', error)
           this.$message.error('操作失败，请稍后重试')
         }
-      })
+      }).catch(() => {});
     },
     
     // 撤销申请（学生撤销待审核的申请）
@@ -1071,7 +1071,7 @@ export default {
           console.error('撤销申请失败:', error)
           this.$message.error('操作失败，请稍后重试')
         }
-      })
+      }).catch(() => {});
     },
     
     // 删除记录（删除已拒绝的申请记录）
@@ -1099,7 +1099,7 @@ export default {
           console.error('删除记录失败:', error)
           this.$message.error('操作失败，请稍后重试')
         }
-      })
+      }).catch(() => {});
     },
     
     // 处理技术要求格式

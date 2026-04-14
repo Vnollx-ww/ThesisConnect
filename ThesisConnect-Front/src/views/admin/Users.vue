@@ -644,7 +644,7 @@ export default {
           console.error('重置密码失败:', error);
           this.$message.error('密码重置失败');
         }
-      });
+      }).catch(() => {});
     },
     
     async toggleUserStatus(user) {
@@ -667,7 +667,7 @@ export default {
           console.error('修改用户状态失败:', error);
           this.$message.error('状态修改失败');
         }
-      });
+      }).catch(() => {});
     },
     
     async batchOperation() {
@@ -695,7 +695,7 @@ export default {
           console.error('批量删除用户失败:', error);
           this.$message.error('批量删除失败');
         }
-      });
+      }).catch(() => {});
     },
     
     exportUsers() {

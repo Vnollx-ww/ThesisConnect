@@ -228,7 +228,7 @@ export default {
             localStorage.removeItem('userInfo');
             this.$router.push('/login');
             this.$message.success('已退出登录');
-          });
+          }).catch(() => {});
           break;
       }
     }

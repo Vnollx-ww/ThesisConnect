@@ -347,7 +347,7 @@ export default {
       }).then(() => {
         // 这里应该调用API保存设置
         this.$message.success('设置保存成功！');
-      });
+      }).catch(() => {});
     },
     
     resetSettings() {
@@ -358,7 +358,7 @@ export default {
       }).then(() => {
         // 重置为默认值
         this.$message.success('设置已重置为默认值！');
-      });
+      }).catch(() => {});
     },
     
     testConnection() {

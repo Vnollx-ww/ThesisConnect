@@ -317,7 +317,7 @@ export default {
             // 显示后端返回的具体错误信息
             this.$message.error(error.message || '选题失败，请稍后重试')
           }
-        });
+        }).catch(() => {});
       }
     },
     
