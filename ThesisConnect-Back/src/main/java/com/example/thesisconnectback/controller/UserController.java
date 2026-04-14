@@ -410,6 +410,30 @@ public class UserController {
     /**
      * 获取当前登录用户
      */
+    /**
+     * Get user activities
+     */
+    @GetMapping("/{id}/activities")
+    public Result<List<Map<String, Object>>> getUserActivities(@PathVariable Long id, HttpServletRequest request) {
+        try {
+            User currentUser = getCurrentUser(request);
+            if (currentUser == null) {
+                return Result.error("未登录");
+            }
+            
+            String role = (String) request.getAttribute("role");
+            if (!"admin".equals(role) && !currentUser.getId().equals(id)) {
+                return Result.forbidden("权限不足");
+            }
+            
+            List<Map<String, Object>> activities = userService.getUserActivities(id);
+            return Result.success(activities);
+        } catch (Exception e) {
+            log.error("获取用户活动失败：", e);
+            return Result.error("获取活动记录失败");
+        }
+    }
+    
     private User getCurrentUser(HttpServletRequest request) {
         try {
             Long userId = (Long) request.getAttribute("userId");

@@ -201,7 +201,8 @@
       title="课题详情"
       :visible.sync="detailDialogVisible"
       width="800px">
-      <div v-if="selectedTopic" class="topic-detail">
+      <div class="topic-detail" v-loading="detailLoading">
+        <div v-if="selectedTopic">
         <div class="detail-header">
           <h3>{{ selectedTopic.title }}</h3>
           <div class="detail-meta">
@@ -263,18 +264,25 @@
           
           <div class="content-section">
             <h4>选择学生</h4>
-            <el-table :data="selectedTopic.students" style="width: 100%">
-              <el-table-column prop="name" label="姓名" width="100"></el-table-column>
-              <el-table-column prop="studentId" label="学号" width="120"></el-table-column>
-              <el-table-column prop="phone" label="联系电话" width="120"></el-table-column>
-              <el-table-column prop="email" label="邮箱" width="150"></el-table-column>
-              <el-table-column prop="progress" label="进度" width="100">
-                <template slot-scope="scope">
-                  <el-progress :percentage="scope.row.progress" :stroke-width="6"></el-progress>
-                </template>
-              </el-table-column>
-            </el-table>
+            <template v-if="selectedTopic.students && selectedTopic.students.length">
+              <el-table :data="selectedTopic.students" style="width: 100%">
+                <el-table-column prop="name" label="姓名" width="100"></el-table-column>
+                <el-table-column prop="studentId" label="学号" width="120"></el-table-column>
+                <el-table-column prop="phone" label="联系电话" width="120"></el-table-column>
+                <el-table-column prop="email" label="邮箱" width="150"></el-table-column>
+                <el-table-column prop="progress" label="进度" width="100">
+                  <template slot-scope="scope">
+                    <el-progress :percentage="scope.row.progress" :stroke-width="6"></el-progress>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </template>
+            <el-empty v-else description="暂无选择学生"></el-empty>
           </div>
+        </div>
+        </div>
+        <div v-else class="empty-detail">
+          <p>请选择课题以查看详情</p>
         </div>
       </div>
     </el-dialog>
@@ -404,6 +412,7 @@ export default {
       pageSize: 20,
       totalTopics: 0,
       detailDialogVisible: false,
+      detailLoading: false,
       editDialogVisible: false,
       addDialogVisible: false,
       selectedTopic: null,
@@ -506,10 +515,10 @@ export default {
         const params = {
           page: this.currentPage,
           size: this.pageSize,
-          major: this.difficultyFilter || undefined,
           difficulty: this.difficultyFilter || undefined,
           status: this.statusFilter || undefined,
-          keyword: this.searchKeyword || undefined
+          keyword: this.searchKeyword || undefined,
+          teacherId: this.teacherFilter || undefined
         };
         
         const response = await topicApi.getTopicList(params);
@@ -559,9 +568,10 @@ export default {
       this.selectedTopics = selection;
     },
     
-    viewTopicDetail(topic) {
-      this.selectedTopic = topic;
+    async viewTopicDetail(topic) {
       this.detailDialogVisible = true;
+      this.selectedTopic = null;
+      await this.loadTopicDetail(topic.id);
     },
     
     editTopic(topic) {
@@ -641,8 +651,37 @@ export default {
       });
     },
     
-    viewStudents(topic) {
-      this.$message.info(`查看课题"${topic.title}"的学生列表`);
+    async viewStudents(topic) {
+      this.detailDialogVisible = true;
+      this.selectedTopic = null;
+      await this.loadTopicDetail(topic.id);
+      this.$nextTick(() => {
+        const dialog = this.$el.querySelector('.topic-detail');
+        if (dialog) {
+          dialog.scrollTop = dialog.scrollHeight;
+        }
+      });
+    },
+
+    async loadTopicDetail(topicId) {
+      this.detailLoading = true;
+      try {
+        const response = await topicApi.getTopicById(topicId);
+        if (response.code === 200 && response.data) {
+          this.selectedTopic = response.data;
+          if (!this.selectedTopic.students) {
+            this.selectedTopic.students = [];
+          }
+        } else {
+          this.$message.error(response.message || '加载课题详情失败');
+        }
+      } catch (error) {
+        console.error('加载课题详情失败:', error);
+        this.$message.error('加载课题详情失败');
+        this.detailDialogVisible = false;
+      } finally {
+        this.detailLoading = false;
+      }
     },
     
     async toggleTopicStatus(topic) {
@@ -1009,5 +1048,11 @@ export default {
   .header-actions {
     margin-top: 10px;
   }
+}
+
+.empty-detail {
+  text-align: center;
+  padding: 40px;
+  color: #999;
 }
 </style>

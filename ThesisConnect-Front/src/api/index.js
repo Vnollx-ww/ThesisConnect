@@ -58,6 +58,9 @@ export const userApi = {
   },
   getStudentStatsByTeacher(teacherId) {
     return request.get(`/api/users/teacher/${teacherId}/student-stats`)
+  },
+  getUserActivities(userId) {
+    return request.get(`/api/users/${userId}/activities`)
   }
 }
 

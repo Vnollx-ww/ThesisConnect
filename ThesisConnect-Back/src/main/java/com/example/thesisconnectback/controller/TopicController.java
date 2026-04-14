@@ -44,7 +44,8 @@ public class TopicController {
             @RequestParam(required = false) String major,
             @RequestParam(required = false) String difficulty,
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) String keyword) {
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long teacherId) {
         try {
             Page<Topic> pageParam = new Page<>(page, size);
             QueryWrapper<Topic> queryWrapper = new QueryWrapper<>();
@@ -62,6 +63,11 @@ public class TopicController {
             // 状态筛选
             if (status != null && !status.isEmpty()) {
                 queryWrapper.eq("status", status);
+            }
+
+            // 教师筛选
+            if (teacherId != null) {
+                queryWrapper.eq("teacher_id", teacherId);
             }
 
             // 关键词搜索
@@ -96,6 +102,11 @@ public class TopicController {
 
                 // 获取选择该课题的学生列表
                 List<User> students = selectionService.getStudentsByTopicId(id);
+                if (students != null) {
+                    for (User student : students) {
+                        student.setPassword(null);
+                    }
+                }
                 topic.setStudents(students);
 
                 return Result.success(topic);

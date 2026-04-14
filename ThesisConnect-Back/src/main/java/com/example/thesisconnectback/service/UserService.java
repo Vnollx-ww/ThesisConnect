@@ -99,4 +99,9 @@ public interface UserService extends IService<User> {
      * Import users from Excel
      */
     int importUsers(MultipartFile file);
+
+    /**
+     * Get user activities
+     */
+    List<Map<String, Object>> getUserActivities(Long userId);
 }

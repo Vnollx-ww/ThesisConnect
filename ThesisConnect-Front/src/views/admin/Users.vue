@@ -454,6 +454,13 @@ export default {
       return this.users;
     }
   },
+  watch: {
+    activeTab(newVal) {
+      if (newVal === 'activities' && this.selectedUser && this.selectedUser.id) {
+        this.loadUserActivities();
+      }
+    }
+  },
   mounted() {
     this.loadUserStats();
     this.loadUsers();
@@ -604,7 +611,21 @@ export default {
     
     viewUserDetail(user) {
       this.selectedUser = user;
+      this.selectedUser.activities = [];
+      this.activeTab = 'basic';
       this.detailDialogVisible = true;
+    },
+    
+    async loadUserActivities() {
+      if (!this.selectedUser || !this.selectedUser.id) return;
+      try {
+        const response = await userApi.getUserActivities(this.selectedUser.id);
+        if (response.code === 200 && response.data) {
+          this.selectedUser.activities = response.data;
+        }
+      } catch (error) {
+        console.error('加载用户活动失败:', error);
+      }
     },
     
     async resetPassword(user) {

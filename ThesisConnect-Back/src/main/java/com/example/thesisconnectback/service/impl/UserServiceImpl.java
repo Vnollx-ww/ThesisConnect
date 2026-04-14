@@ -3,8 +3,10 @@ package com.example.thesisconnectback.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.thesisconnectback.entity.User;
+import com.example.thesisconnectback.entity.Selection;
 import com.example.thesisconnectback.mapper.UserMapper;
 import com.example.thesisconnectback.service.UserService;
+import com.example.thesisconnectback.service.SelectionService;
 import org.mindrot.jbcrypt.BCrypt;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -27,6 +29,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
 
     @Autowired
     private UserMapper userMapper;
+
+    @Autowired
+    private SelectionService selectionService;
 
     @Override
     @Transactional
@@ -346,5 +351,46 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             case NUMERIC: return String.valueOf((long) cell.getNumericCellValue());
             default: return null;
         }
+    }
+
+    @Override
+    public List<Map<String, Object>> getUserActivities(Long userId) {
+        List<Map<String, Object>> activities = new ArrayList<>();
+        User user = getById(userId);
+        if (user == null) return activities;
+
+        // 用户注册活动
+        Map<String, Object> regActivity = new HashMap<>();
+        regActivity.put("title", "账号注册");
+        regActivity.put("description", user.getRealName() + " 完成了账号注册");
+        regActivity.put("time", user.getCreateTime());
+        regActivity.put("type", "register");
+        activities.add(regActivity);
+
+        // If student, add topic selection activities
+        if ("student".equals(user.getRole())) {
+            QueryWrapper<com.example.thesisconnectback.entity.Selection> selQuery = new QueryWrapper<>();
+            selQuery.eq("student_id", userId).orderByDesc("create_time").last("LIMIT 10");
+            List<com.example.thesisconnectback.entity.Selection> selections = selectionService.list(selQuery);
+            for (com.example.thesisconnectback.entity.Selection sel : selections) {
+                Map<String, Object> act = new HashMap<>();
+                act.put("title", "课题选择");
+                act.put("description", "选择了课题编号 " + sel.getTopicId() + "，当前状态：" + sel.getStatus());
+                act.put("time", sel.getCreateTime());
+                act.put("type", "selection");
+                activities.add(act);
+            }
+        }
+
+        // Sort by time
+        activities.sort((a, b) -> {
+            Object t1 = a.get("time");
+            Object t2 = b.get("time");
+            if (t1 == null) return 1;
+            if (t2 == null) return -1;
+            return t2.toString().compareTo(t1.toString());
+        });
+
+        return activities;
     }
 }
