@@ -389,8 +389,8 @@ export const statsApi = {
   },
   
   // Get recent activities
-  getRecentActivities() {
-    return request.get('/api/stats/recent-activities')
+  getRecentActivities(limit = 10) {
+    return request.get('/api/stats/recent-activities', { params: { limit } })
   },
   
   // 获取教师学生统计

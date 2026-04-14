@@ -3,6 +3,7 @@ package com.example.thesisconnectback.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.example.thesisconnectback.entity.User;
 
+import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.Map;
 
@@ -93,4 +94,9 @@ public interface UserService extends IService<User> {
      * Get recent users
      */
     List<Map<String, Object>> getRecentUsers(int limit);
+
+    /**
+     * Import users from Excel
+     */
+    int importUsers(MultipartFile file);
 }

@@ -267,7 +267,7 @@ public class StatsController {
      * 获取最近活动
      */
     @GetMapping("/recent-activities")
-    public Result<List<Map<String, Object>>> getRecentActivities(HttpServletRequest request) {
+    public Result<List<Map<String, Object>>> getRecentActivities(@RequestParam(defaultValue = "10") Integer limit, HttpServletRequest request) {
         try {
             String role = (String) request.getAttribute("role");
             if (!"admin".equals(role)) {
@@ -277,7 +277,7 @@ public class StatsController {
             List<Map<String, Object>> activities = new ArrayList<>();
 
             // 获取最近注册的用户
-            List<Map<String, Object>> recentUsers = userService.getRecentUsers(5);
+            List<Map<String, Object>> recentUsers = userService.getRecentUsers(limit);
             for (Map<String, Object> user : recentUsers) {
                 Map<String, Object> activity = new HashMap<>();
                 activity.put("title", "新用户注册");
@@ -288,7 +288,7 @@ public class StatsController {
             }
 
             // 获取最近发布的课题
-            List<Map<String, Object>> recentTopics = topicService.getRecentTopics(5);
+            List<Map<String, Object>> recentTopics = topicService.getRecentTopics(limit);
             for (Map<String, Object> topic : recentTopics) {
                 Map<String, Object> activity = new HashMap<>();
                 activity.put("title", "课题发布");
@@ -299,7 +299,7 @@ public class StatsController {
             }
 
             // 获取最近选题记录
-            List<Map<String, Object>> recentSelections = selectionService.getRecentSelections(5);
+            List<Map<String, Object>> recentSelections = selectionService.getRecentSelections(limit);
             for (Map<String, Object> selection : recentSelections) {
                 Map<String, Object> activity = new HashMap<>();
                 activity.put("title", "选题成功");
@@ -318,7 +318,7 @@ public class StatsController {
                         if (timeB == null) return -1;
                         return timeB.toString().compareTo(timeA.toString());
                     })
-                    .limit(10)
+                    .limit(limit)
                     .collect(Collectors.toList());
 
             return Result.success(result);

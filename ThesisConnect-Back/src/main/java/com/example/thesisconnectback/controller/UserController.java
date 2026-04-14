@@ -11,8 +11,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
 
 /**
  * 用户管理控制器
@@ -302,6 +304,34 @@ public class UserController {
         } catch (Exception e) {
             log.error("获取用户统计信息失败：", e);
             return Result.error("获取用户统计信息失败");
+        }
+    }
+    
+    /**
+     * Import users from Excel
+     */
+    @PostMapping("/import")
+    public Result<Integer> importUsers(@RequestParam("file") MultipartFile file, HttpServletRequest request) {
+        try {
+            String role = (String) request.getAttribute("role");
+            if (!"admin".equals(role)) {
+                return Result.forbidden("权限不足");
+            }
+
+            if (file.isEmpty()) {
+                return Result.badRequest("文件为空");
+            }
+
+            String fileName = file.getOriginalFilename();
+            if (fileName == null || (!fileName.endsWith(".xlsx") && !fileName.endsWith(".xls"))) {
+                return Result.badRequest("仅支持Excel文件");
+            }
+
+            int importedCount = userService.importUsers(file);
+            return Result.success(importedCount);
+        } catch (Exception e) {
+            log.error("导入用户失败：", e);
+            return Result.error("导入失败：" + e.getMessage());
         }
     }
     

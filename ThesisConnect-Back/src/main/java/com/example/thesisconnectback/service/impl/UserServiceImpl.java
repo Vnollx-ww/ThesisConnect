@@ -9,6 +9,9 @@ import org.mindrot.jbcrypt.BCrypt;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -291,5 +294,57 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             map.put("create_time", user.getCreateTime());
             return map;
         }).collect(Collectors.toList());
+    }
+    
+    @Override
+    @Transactional
+    public int importUsers(MultipartFile file) {
+        int count = 0;
+        try {
+            Workbook workbook = new XSSFWorkbook(file.getInputStream());
+            Sheet sheet = workbook.getSheetAt(0);
+            
+            // Skip header row
+            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+                Row row = sheet.getRow(i);
+                if (row == null) continue;
+                
+                User user = new User();
+                user.setUsername(getCellValue(row.getCell(0)));
+                user.setRealName(getCellValue(row.getCell(1)));
+                user.setRole(getCellValue(row.getCell(2)));
+                user.setEmail(getCellValue(row.getCell(3)));
+                user.setPhone(getCellValue(row.getCell(4)));
+                user.setStudentId(getCellValue(row.getCell(5)));
+                user.setDepartment(getCellValue(row.getCell(6)));
+                
+                String password = getCellValue(row.getCell(7));
+                if (password == null || password.isEmpty()) {
+                    password = "123456";
+                }
+                user.setPassword(BCrypt.hashpw(password, BCrypt.gensalt()));
+                user.setStatus(1);
+                user.setLoginCount(0);
+                
+                // Check if username already exists
+                if (findByUsername(user.getUsername()) == null) {
+                    save(user);
+                    count++;
+                }
+            }
+            workbook.close();
+        } catch (Exception e) {
+            throw new RuntimeException("导入失败：" + e.getMessage());
+        }
+        return count;
+    }
+    
+    private String getCellValue(Cell cell) {
+        if (cell == null) return null;
+        switch (cell.getCellType()) {
+            case STRING: return cell.getStringCellValue();
+            case NUMERIC: return String.valueOf((long) cell.getNumericCellValue());
+            default: return null;
+        }
     }
 }

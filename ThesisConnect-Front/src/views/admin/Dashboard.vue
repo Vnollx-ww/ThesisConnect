@@ -187,6 +187,30 @@
         </el-col>
       </el-row>
     </div>
+    
+    <!-- 全部活动对话框 -->
+    <el-dialog title="全部活动" :visible.sync="allActivitiesDialogVisible" width="700px">
+      <div v-loading="allActivitiesLoading">
+        <el-timeline>
+          <el-timeline-item
+            v-for="(activity, index) in allActivities"
+            :key="index"
+            :timestamp="activity.time"
+            :type="getActivityType(activity.type)">
+            <div class="activity-content">
+              <h4>{{ activity.title }}</h4>
+              <p>{{ activity.description }}</p>
+              <el-tag :type="getActivityType(activity.type)" size="small">
+                {{ getActivityTypeText(activity.type) }}
+              </el-tag>
+            </div>
+          </el-timeline-item>
+          <div v-if="allActivities.length === 0" style="text-align: center; padding: 40px; color: #999;">
+            暂无活动记录
+          </div>
+        </el-timeline>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -225,7 +249,10 @@ export default {
         total: 0
       },
 
-      recentActivities: []
+      recentActivities: [],
+      allActivities: [],
+      allActivitiesDialogVisible: false,
+      allActivitiesLoading: false
     }
   },
   computed: {
@@ -410,8 +437,20 @@ export default {
       }
     },
 
-    viewAllActivities() {
-      this.$message.info('查看全部活动功能开发中...');
+    async viewAllActivities() {
+      this.allActivitiesDialogVisible = true;
+      this.allActivitiesLoading = true;
+      try {
+        const response = await statsApi.getRecentActivities(50);
+        if (response.code === 200 && response.data) {
+          this.allActivities = response.data;
+        }
+      } catch (error) {
+        console.error('加载全部活动失败:', error);
+        this.$message.error('加载活动记录失败');
+      } finally {
+        this.allActivitiesLoading = false;
+      }
     },
     
     goToUserManagement() {

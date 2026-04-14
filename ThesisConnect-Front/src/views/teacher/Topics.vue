@@ -293,11 +293,6 @@
                   <el-progress :percentage="scope.row.progress" :stroke-width="6"></el-progress>
                 </template>
               </el-table-column>
-                    <el-table-column label="操作" width="120">
-                      <template slot-scope="scope">
-                        <el-button type="text" size="small" @click="viewStudentProgress(scope.row)">查看进度</el-button>
-                </template>
-              </el-table-column>
             </el-table>
           </div>
                 <div v-else class="no-students">
@@ -586,10 +581,6 @@ export default {
         return requirements.split('\n').filter(req => req.trim());
       }
       return requirements;
-    },
-    
-    viewStudentProgress(student) {
-      this.$message.info(`查看学生 ${student.name} 的进度详情功能开发中...`);
     },
     
     handleFilter() {

@@ -259,6 +259,31 @@
       </span>
     </el-dialog>
     
+    <!-- 导入用户对话框 -->
+    <el-dialog title="导入用户" :visible.sync="importDialogVisible" width="500px">
+      <div class="import-template">
+        <p>请下载模板文件，按格式填写后上传：</p>
+        <el-button size="small" @click="downloadTemplate">下载模板</el-button>
+      </div>
+      <el-upload
+        class="upload-demo"
+        drag
+        :action="uploadUrl"
+        :headers="uploadHeaders"
+        :before-upload="beforeUpload"
+        :on-success="handleUploadSuccess"
+        :on-error="handleUploadError"
+        :show-file-list="false"
+        accept=".xlsx,.xls">
+        <i class="el-icon-upload"></i>
+        <div class="el-upload__text">将文件拖到此处，或<em>点击上传</em></div>
+        <div class="el-upload__tip" slot="tip">只能上传xlsx/xls文件</div>
+      </el-upload>
+      <div v-if="importing" style="text-align: center; margin-top: 20px;">
+        <i class="el-icon-loading"></i> 正在导入...
+      </div>
+    </el-dialog>
+    
     <!-- 用户详情对话框 -->
     <el-dialog
       title="用户详情"
@@ -374,6 +399,10 @@ export default {
       activeTab: 'basic',
       selectedUsers: [],
       loading: false,
+      importDialogVisible: false,
+      importing: false,
+      uploadUrl: 'http://localhost:8080/api/users/import',
+      uploadHeaders: {},
       
       userForm: {
         username: '',
@@ -671,7 +700,49 @@ export default {
     },
     
     importUsers() {
-      this.$message.info('用户导入功能开发中...');
+      this.uploadHeaders = {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      };
+      this.importDialogVisible = true;
+    },
+    
+    downloadTemplate() {
+      const templateData = [
+        { 'username': 'zhangsan', 'realName': '张三', 'role': 'student', 'email': 'zhangsan@example.com', 'phone': '13800138000', 'studentId': '2024001', 'department': '计算机科学与技术', 'password': '123456' },
+        { 'username': 'lisi', 'realName': '李四', 'role': 'teacher', 'email': 'lisi@example.com', 'phone': '13900139000', 'studentId': 'T001', 'department': '软件学院', 'password': '123456' }
+      ];
+      const fileName = '用户导入模板.xlsx';
+      exportToExcel(templateData, 'Template', fileName);
+    },
+    
+    beforeUpload(file) {
+      const isExcel = file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || 
+                       file.type === 'application/vnd.ms-excel' ||
+                       file.name.endsWith('.xlsx') || 
+                       file.name.endsWith('.xls');
+      if (!isExcel) {
+        this.$message.error('只能上传 Excel 文件');
+        return false;
+      }
+      this.importing = true;
+      return true;
+    },
+    
+    handleUploadSuccess(response) {
+      this.importing = false;
+      if (response.code === 200) {
+        this.$message.success(`成功导入 ${response.data || 0} 个用户`);
+        this.importDialogVisible = false;
+        this.loadUsers();
+        this.loadUserStats();
+      } else {
+        this.$message.error(response.message || '导入失败');
+      }
+    },
+    
+    handleUploadError(error) {
+      this.importing = false;
+      this.$message.error('上传失败，请重试');
     },
     
     getRoleType(role) {

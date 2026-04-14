@@ -203,12 +203,20 @@ export default {
     
     handleCommand(command) {
       switch (command) {
-        case 'profile':
-          this.$message.info('个人资料功能开发中...');
+        case 'profile': {
+          const profilePath = this.userRole === 'student' ? '/student/profile' 
+            : this.userRole === 'teacher' ? '/teacher/profile' 
+            : '/admin/system';
+          this.$router.push(profilePath);
           break;
-        case 'settings':
-          this.$message.info('系统设置功能开发中...');
+        }
+        case 'settings': {
+          const settingsPath = this.userRole === 'admin' ? '/admin/system' 
+            : this.userRole === 'teacher' ? '/teacher/profile' 
+            : '/student/profile';
+          this.$router.push(settingsPath);
           break;
+        }
         case 'logout':
           this.$confirm('确定要退出登录吗？', '提示', {
             confirmButtonText: '确定',
