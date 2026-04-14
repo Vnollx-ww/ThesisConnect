@@ -415,15 +415,15 @@ export default {
     },
     
     goToUserManagement() {
-      this.$router.push('/layout/admin/users');
+      this.$router.push('/admin/users');
     },
     
     goToTopicManagement() {
-      this.$router.push('/layout/admin/topics');
+      this.$router.push('/admin/topics');
     },
     
     goToSystemSettings() {
-      this.$router.push('/layout/admin/system');
+      this.$router.push('/admin/system');
     },
     
     exportSystemData() {

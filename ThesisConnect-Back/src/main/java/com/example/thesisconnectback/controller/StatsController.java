@@ -264,52 +264,52 @@ public class StatsController {
     }
 
     /**
-     * Get recent activities
+     * 获取最近活动
      */
     @GetMapping("/recent-activities")
     public Result<List<Map<String, Object>>> getRecentActivities(HttpServletRequest request) {
         try {
             String role = (String) request.getAttribute("role");
             if (!"admin".equals(role)) {
-                return Result.forbidden("Insufficient permissions");
+                return Result.forbidden("权限不足");
             }
 
             List<Map<String, Object>> activities = new ArrayList<>();
 
-            // Get recent user registrations
+            // 获取最近注册的用户
             List<Map<String, Object>> recentUsers = userService.getRecentUsers(5);
             for (Map<String, Object> user : recentUsers) {
                 Map<String, Object> activity = new HashMap<>();
-                activity.put("title", "New user registration");
-                activity.put("description", user.get("real_name") + " registered an account");
+                activity.put("title", "新用户注册");
+                activity.put("description", user.get("real_name") + " 注册了账号");
                 activity.put("time", user.get("create_time"));
                 activity.put("type", "user");
                 activities.add(activity);
             }
 
-            // Get recent topics
+            // 获取最近发布的课题
             List<Map<String, Object>> recentTopics = topicService.getRecentTopics(5);
             for (Map<String, Object> topic : recentTopics) {
                 Map<String, Object> activity = new HashMap<>();
-                activity.put("title", "Topic published");
-                activity.put("description", topic.get("teacher_name") + " published new topic \"" + topic.get("title") + "\"");
+                activity.put("title", "课题发布");
+                activity.put("description", topic.get("teacher_name") + " 发布了新课题「" + topic.get("title") + "」");
                 activity.put("time", topic.get("create_time"));
                 activity.put("type", "topic");
                 activities.add(activity);
             }
 
-            // Get recent selections
+            // 获取最近选题记录
             List<Map<String, Object>> recentSelections = selectionService.getRecentSelections(5);
             for (Map<String, Object> selection : recentSelections) {
                 Map<String, Object> activity = new HashMap<>();
-                activity.put("title", "Topic selection successful");
-                activity.put("description", selection.get("student_name") + " selected topic \"" + selection.get("topic_title") + "\"");
+                activity.put("title", "选题成功");
+                activity.put("description", selection.get("student_name") + " 选择了课题「" + selection.get("topic_title") + "」");
                 activity.put("time", selection.get("create_time"));
                 activity.put("type", "selection");
                 activities.add(activity);
             }
 
-            // Sort by time descending and take top 10
+            // 按时间倒序排列，取前10条
             List<Map<String, Object>> result = activities.stream()
                     .sorted((a, b) -> {
                         Object timeA = a.get("time");
@@ -323,8 +323,8 @@ public class StatsController {
 
             return Result.success(result);
         } catch (Exception e) {
-            log.error("Get recent activities failed: ", e);
-            return Result.error("Failed to get recent activities");
+            log.error("获取最近活动失败：", e);
+            return Result.error("获取最近活动失败");
         }
     }
 }
