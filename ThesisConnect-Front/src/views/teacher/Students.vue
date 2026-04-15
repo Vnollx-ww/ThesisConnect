@@ -924,6 +924,7 @@ export default {
             // 重新加载学生列表
             await this.loadStudents();
             await this.loadStats();
+            this.$root.$emit('notifications-updated');
           } else {
             this.$message.error(response.message || `${action}失败`);
           }
@@ -1282,6 +1283,19 @@ export default {
   font-weight: 600;
   color: #2c3e50;
   margin: 0;
+}
+
+.section-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.batch-hint {
+  margin: 0 0 12px;
+  color: #606266;
+  font-size: 14px;
 }
 
 .student-detail {
