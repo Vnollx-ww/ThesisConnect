@@ -33,9 +33,14 @@ public interface SelectionService extends IService<Selection> {
     List<Selection> findByStatus(String status);
 
     /**
-     * 学生选择课题
+     * 校验选题请求（开放时间与志愿数等），不通过时抛出 BusinessException
      */
-    boolean selectTopic(Long studentId, Long topicId);
+    void validateSelectTopicRequest(Long studentId, Long topicId);
+
+    /**
+     * 学生选择课题；失败时抛出 {@link com.example.thesisconnectback.exception.BusinessException}
+     */
+    Selection selectTopic(Long studentId, Long topicId);
 
     /**
      * 取消选择课题

@@ -55,6 +55,23 @@ spring:
     template:
       mandatory: true
 
+  # 邮件（QQ：设置 → 账户 → 开启 SMTP，使用「授权码」；可用环境变量 MAIL_PASSWORD）
+  mail:
+    host: smtp.qq.com
+    port: 465
+    username: 2720741614@qq.com
+    password: ${MAIL_PASSWORD:}
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+          socketFactory:
+            class: javax.net.ssl.SSLSocketFactory
+            port: 465
+
 # 服务器配置
 server:
   port: 8080
@@ -72,6 +89,15 @@ mybatis-plus:
       logic-delete-field: deleted
       logic-delete-value: 1
       logic-not-delete-value: 0
+
+# 发件人显示名、业务文案
+thesis:
+  mail:
+    enabled: true
+    from-name: ThesisConnect 毕业论文选题系统
+    site-name: ThesisConnect
+    # 邮件内按钮跳转的前端根地址（与部署一致；本地前端常见 3030 端口）
+    frontend-base-url: ${FRONTEND_BASE_URL:http://localhost:3030}
 
 # JWT配置
 jwt:

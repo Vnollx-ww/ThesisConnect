@@ -120,6 +120,19 @@ public class JwtUtil {
     }
 
     /**
+     * 距离过期剩余秒数（用于 Redis 黑名单 TTL）
+     */
+    public long getRemainingSeconds(String token) {
+        try {
+            Date exp = getExpirationDateFromToken(token);
+            long sec = (exp.getTime() - System.currentTimeMillis()) / 1000;
+            return Math.max(0, sec);
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    /**
      * 验证token
      */
     public Boolean validateToken(String token, String username) {

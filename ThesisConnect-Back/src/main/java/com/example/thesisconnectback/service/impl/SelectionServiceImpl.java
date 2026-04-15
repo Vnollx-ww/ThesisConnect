@@ -8,8 +8,11 @@ import com.example.thesisconnectback.entity.User;
 import com.example.thesisconnectback.mapper.SelectionMapper;
 import com.example.thesisconnectback.mapper.TopicMapper;
 import com.example.thesisconnectback.mapper.UserMapper;
+import com.example.thesisconnectback.exception.BusinessException;
 import com.example.thesisconnectback.service.SelectionService;
+import com.example.thesisconnectback.service.SystemConfigService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +37,20 @@ public class SelectionServiceImpl extends ServiceImpl<SelectionMapper, Selection
     @Autowired
     private UserMapper userMapper;
 
+    @Autowired
+    private SystemConfigService systemConfigService;
+
+    @Override
+    public void validateSelectTopicRequest(Long studentId, Long topicId) {
+        if (!systemConfigService.isWithinSelectionPeriod()) {
+            throw new BusinessException(400, "当前不在选题开放时间内");
+        }
+        int max = systemConfigService.getMaxSelectionsPerStudent();
+        if (selectionMapper.countNonRejectedByStudentId(studentId) >= max) {
+            throw new BusinessException(400, "已达到最大选题申请数");
+        }
+    }
+
     @Override
     public List<Selection> findByStudentId(Long studentId) {
         return selectionMapper.findByStudentId(studentId);
@@ -56,35 +73,26 @@ public class SelectionServiceImpl extends ServiceImpl<SelectionMapper, Selection
 
     @Override
     @Transactional
-    public boolean selectTopic(Long studentId, Long topicId) {
-        // 检查学生是否已选择课题
-        if (hasSelectedTopic(studentId)) {
-            return false;
-        }
-
-        // 检查课题是否已满员（只检查已审核通过的数量）
-        if (isTopicFull(topicId)) {
-            return false;
-        }
-
-        // 检查学生是否被该课题拒绝过
-        if (selectionMapper.countRejectedByStudentAndTopic(studentId, topicId) > 0) {
-            return false;
-        }
-
-        // 获取课题信息
-        Topic topic = topicMapper.selectById(topicId);
+    public Selection selectTopic(Long studentId, Long topicId) {
+        // 锁定课题行，避免并发下超额确认
+        Topic topic = topicMapper.selectByIdForUpdate(topicId);
         if (topic == null) {
-            return false;
+            throw new BusinessException(400, "课题不存在");
         }
 
-        // 获取学生信息
+        if (isTopicFull(topicId)) {
+            throw new BusinessException(400, "该课题已满员");
+        }
+
+        if (selectionMapper.countRejectedByStudentAndTopic(studentId, topicId) > 0) {
+            throw new BusinessException(400, "您已被该课题拒绝，无法再次申请");
+        }
+
         User student = userMapper.selectById(studentId);
         if (student == null) {
-            return false;
+            throw new BusinessException(400, "用户不存在");
         }
 
-        // 创建选题记录
         Selection selection = new Selection();
         selection.setStudentId(studentId);
         selection.setStudentName(student.getRealName());
@@ -99,18 +107,15 @@ public class SelectionServiceImpl extends ServiceImpl<SelectionMapper, Selection
         selection.setCreateTime(LocalDateTime.now());
         selection.setUpdateTime(LocalDateTime.now());
 
-        boolean saved = save(selection);
-        
-        // 申请时不增加课题的已选人数，只有在确认后才增加
-        /*
-        if (saved) {
-            // 计算该课题的选题总数（包括待审核和已审核的）
-            int totalSelections = selectionMapper.countByTopicId(topicId);
-            topicMapper.updateSelectedCount(topicId, totalSelections);
+        try {
+            if (!save(selection)) {
+                throw new BusinessException(400, "选题失败");
+            }
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessException(400, "选题失败，请勿重复提交或稍后再试");
         }
-        */
-        
-        return saved;
+
+        return selection;
     }
 
     @Override
@@ -143,11 +148,11 @@ public class SelectionServiceImpl extends ServiceImpl<SelectionMapper, Selection
             
             boolean updated = updateById(selection);
             
-            // 如果更新成功，更新课题的已选学生数（因为状态改变可能影响显示）
+            // 与 isTopicFull 一致：课题容量按「已通过」申请数统计
             if (updated) {
                 Long topicId = selection.getTopicId();
-                int totalSelections = selectionMapper.countByTopicId(topicId);
-                topicMapper.updateSelectedCount(topicId, totalSelections);
+                int approvedCount = selectionMapper.countApprovedByTopicId(topicId);
+                topicMapper.updateSelectedCount(topicId, approvedCount);
             }
             
             return updated;
@@ -319,15 +324,23 @@ public class SelectionServiceImpl extends ServiceImpl<SelectionMapper, Selection
         return total > 0 ? ((double)completed / total) * 100 : 0;
     }
 
+    private static int clampListLimit(int limit) {
+        if (limit < 1) {
+            return 10;
+        }
+        return Math.min(limit, 100);
+    }
+
     /**
      * Get recent selections
      */
     @Override
     public List<Map<String, Object>> getRecentSelections(int limit) {
+        int safeLimit = clampListLimit(limit);
         QueryWrapper<Selection> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("deleted", 0)
                    .orderByDesc("create_time")
-                   .last("LIMIT " + limit);
+                   .last("LIMIT " + safeLimit);
         List<Selection> selections = list(queryWrapper);
         return selections.stream().map(selection -> {
             Map<String, Object> map = new HashMap<>();

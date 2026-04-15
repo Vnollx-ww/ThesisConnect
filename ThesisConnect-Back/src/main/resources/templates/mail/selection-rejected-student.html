@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>选题申请未通过</title>
+</head>
+<body style="margin:0;padding:0;background:#fff5f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'PingFang SC','Microsoft YaHei',sans-serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="padding:32px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 12px 36px rgba(245,34,45,0.08);">
+          <tr>
+            <td style="padding:32px 32px 20px;text-align:center;background:linear-gradient(180deg,#fff2f0 0%,#ffffff 100%);">
+              <div style="font-size:40px;margin-bottom:8px;">💬</div>
+              <h2 style="margin:0;color:#cf1322;font-size:19px;font-weight:700;">选题申请未通过</h2>
+              <p style="margin:12px 0 0;color:#8c8c8c;font-size:14px;max-width:420px;margin-left:auto;margin-right:auto;line-height:1.65;">
+                这并不代表对您能力的否定，您仍可关注其他课题或联系导师沟通。
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:8px 36px 24px;">
+              <p style="margin:0 0 14px;color:#434a54;font-size:15px;">
+                <span th:text="${studentName}">同学</span> 您好，
+              </p>
+              <p style="margin:0 0 20px;color:#5c6b7a;font-size:15px;line-height:1.75;">
+                您提交的以下课题申请，经指导教师审核后未通过。详情如下，您可在选题规则允许的前提下选择其他课题再次申请。
+              </p>
+              <table width="100%" style="border-radius:12px;background:#fafafa;border:1px solid #ffccc7;overflow:hidden;">
+                <tr>
+                  <td style="padding:18px 20px;">
+                    <table width="100%" cellspacing="0" cellpadding="6" style="font-size:14px;color:#434a54;">
+                      <tr>
+                        <td style="width:72px;color:#8c8c8c;">课题</td>
+                        <td style="font-weight:600;color:#262626;line-height:1.5;" th:text="${topicTitle}">—</td>
+                      </tr>
+                      <tr>
+                        <td style="color:#8c8c8c;">导师</td>
+                        <td style="font-weight:600;" th:text="${teacherName}">—</td>
+                      </tr>
+                      <tr>
+                        <td style="color:#8c8c8c;vertical-align:top;">说明</td>
+                        <td style="line-height:1.65;color:#595959;white-space:pre-wrap;" th:text="${comment}">—</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 36px 32px;text-align:center;">
+              <p style="margin:0 0 18px;font-size:13px;color:#a8071a;background:#fff1f0;padding:14px 18px;border-radius:10px;border:1px dashed #ffa39e;">
+                💡 建议：登录系统浏览更多课题，或向学院教务老师咨询选题政策。
+              </p>
+              <a th:href="${linkStudentTopics}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:12px 28px;background:#ffffff;color:#cf1322 !important;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;border:2px solid #ffccc7;">浏览选题列表</a>
+              <p th:if="${linksConfigured}" style="margin:16px 0 0;font-size:12px;color:#95a5a6;word-break:break-all;" th:text="|链接：${linkStudentTopics}|">链接</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:16px;background:#fafafa;text-align:center;border-top:1px solid #f0f0f0;">
+              <p style="margin:0;font-size:12px;color:#a0a7b4;" th:text="${siteName} + ' · 本邮件由系统自动发送'">页脚</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

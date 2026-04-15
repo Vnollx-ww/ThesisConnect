@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+  <title>欢迎加入</title>
+  <!--[if mso]>
+  <style type="text/css">table {border-collapse: collapse;}</style>
+  <![endif]-->
+</head>
+<body style="margin:0;padding:0;background:#eef2f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,'PingFang SC','Microsoft YaHei',sans-serif;">
+  <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;" th:text="'欢迎加入 ' + ${siteName}">欢迎</div>
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:linear-gradient(180deg,#e8f4fc 0%,#eef2f7 40%);padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 12px 40px rgba(24,144,255,0.12);">
+          <tr>
+            <td style="background:linear-gradient(135deg,#1890ff 0%,#096dd9 50%,#0050b3 100%);padding:28px 32px;text-align:center;">
+              <div style="font-size:42px;line-height:1;margin-bottom:8px;">🎓</div>
+              <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:600;letter-spacing:0.5px;" th:text="'欢迎加入 ' + ${siteName}">欢迎加入</h1>
+              <p style="margin:10px 0 0;color:rgba(255,255,255,0.92);font-size:14px;">您的账号已就绪，开启毕业论文选题之旅</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px 36px 8px;">
+              <p style="margin:0 0 16px;color:#2c3e50;font-size:16px;line-height:1.7;">
+                您好，<strong style="color:#1890ff;" th:text="${realName}">同学</strong>
+              </p>
+              <p style="margin:0 0 20px;color:#5c6b7a;font-size:15px;line-height:1.75;">
+                感谢注册 <span th:text="${siteName}">ThesisConnect</span>。您现在可以登录系统浏览课题、提交申请，并与指导教师协同完成选题流程。
+              </p>
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="width:100%;background:#f6fbff;border-radius:12px;border:1px solid #d6e9ff;">
+                <tr>
+                  <td style="padding:18px 20px;">
+                    <p style="margin:0 0 8px;color:#1890ff;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">接下来您可以</p>
+                    <ul style="margin:0;padding-left:18px;color:#434a54;font-size:14px;line-height:1.85;">
+                      <li>完善个人资料，便于导师了解您</li>
+                      <li>在选题开放时间内浏览并提交志愿</li>
+                      <li>关注邮件与系统通知，及时处理审核结果</li>
+                    </ul>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:8px 36px 36px;text-align:center;">
+              <a th:href="${linkLogin}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:14px 36px;background:linear-gradient(135deg,#1890ff,#096dd9);color:#ffffff !important;text-decoration:none;border-radius:999px;font-size:15px;font-weight:600;box-shadow:0 6px 20px rgba(24,144,255,0.35);">登录系统</a>
+              <p th:if="${linksConfigured}" style="margin:20px 0 0;font-size:12px;color:#95a5a6;line-height:1.6;word-break:break-all;">若按钮无法跳转，请复制链接到浏览器打开：<br/><span style="color:#1890ff;" th:text="${linkLogin}">链接</span></p>
+              <p th:unless="${linksConfigured}" style="margin:20px 0 0;font-size:12px;color:#95a5a6;line-height:1.5;">请在配置中设置 <code style="background:#f5f5f5;padding:2px 6px;border-radius:4px;">thesis.mail.frontend-base-url</code> 以生成可点击链接。</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:20px 36px;background:#fafbfc;border-top:1px solid #edf0f2;text-align:center;">
+              <p style="margin:0;font-size:12px;color:#a0a7b4;line-height:1.6;" th:text="${siteName} + ' · 本邮件由系统自动发送，请勿直接回复。'">页脚</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

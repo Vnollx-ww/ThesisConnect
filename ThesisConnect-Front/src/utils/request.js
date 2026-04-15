@@ -52,6 +52,7 @@ service.interceptors.response.use(
                 // 权限不足或未授权，清除本地token并跳转登录
                 localStorage.removeItem('token');
                 localStorage.removeItem('userId');
+                localStorage.removeItem('role');
                 // 避免循环依赖，直接使用 location
                 if (location.hash !== '#/login') {
                     location.hash = '#/login'

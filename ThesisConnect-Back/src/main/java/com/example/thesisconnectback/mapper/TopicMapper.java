@@ -58,6 +58,12 @@ public interface TopicMapper extends BaseMapper<Topic> {
     void updateSelectedCount(@Param("topicId") Long topicId, @Param("selectedCount") Integer selectedCount);
 
     /**
+     * 悲观锁查询课题（用于并发选题）
+     */
+    @Select("SELECT * FROM sys_topic WHERE id = #{id} AND deleted = 0 FOR UPDATE")
+    Topic selectByIdForUpdate(@Param("id") Long id);
+
+    /**
      * 统计各难度课题数量
      */
     @Select("SELECT difficulty, COUNT(*) as count FROM sys_topic WHERE deleted = 0 GROUP BY difficulty")

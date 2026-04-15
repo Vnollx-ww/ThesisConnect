@@ -68,6 +68,10 @@
             <i class="el-icon-setting"></i>
             <span slot="title">系统设置</span>
           </el-menu-item>
+          <el-menu-item index="/admin/system-logs">
+            <i class="el-icon-document-copy"></i>
+            <span slot="title">操作日志</span>
+          </el-menu-item>
         </template>
       </el-menu>
     </el-aside>
@@ -222,10 +226,16 @@ export default {
             confirmButtonText: '确定',
             cancelButtonText: '取消',
             type: 'warning'
-          }).then(() => {
-            // 清除用户信息
+          }).then(async () => {
+            try {
+              await authApi.logout();
+            } catch (e) {
+              /* 后端不可用时仍清理本地会话 */
+            }
             localStorage.removeItem('token');
             localStorage.removeItem('userInfo');
+            localStorage.removeItem('role');
+            localStorage.removeItem('userId');
             this.$router.push('/login');
             this.$message.success('已退出登录');
           }).catch(() => {});

@@ -200,5 +200,10 @@ public interface UserService extends IService<User> {
 
     int importUsers(MultipartFile file);
 
+    /**
+     * 用户活动记录（个人中心展示）
+     */
+    List<Map<String, Object>> getUserActivities(Long userId);
+
 }
 

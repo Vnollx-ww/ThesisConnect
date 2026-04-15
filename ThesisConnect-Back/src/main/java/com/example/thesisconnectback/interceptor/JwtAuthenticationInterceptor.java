@@ -1,6 +1,7 @@
 package com.example.thesisconnectback.interceptor;
 
 import com.example.thesisconnectback.common.Result;
+import com.example.thesisconnectback.service.TokenBlacklistService;
 import com.example.thesisconnectback.util.JwtUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +24,12 @@ public class JwtAuthenticationInterceptor implements HandlerInterceptor {
     @Autowired
     private JwtUtil jwtUtil;
 
+    @Autowired
+    private TokenBlacklistService tokenBlacklistService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         // 处理跨域预检请求
@@ -36,6 +43,11 @@ public class JwtAuthenticationInterceptor implements HandlerInterceptor {
 
         if (token == null) {
             writeErrorResponse(response, "未提供认证token");
+            return false;
+        }
+
+        if (tokenBlacklistService.isBlacklisted(token)) {
+            writeErrorResponse(response, "登录已失效，请重新登录");
             return false;
         }
 
@@ -71,7 +83,6 @@ public class JwtAuthenticationInterceptor implements HandlerInterceptor {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         
         Result<Void> result = Result.unauthorized(message);
-        ObjectMapper objectMapper = new ObjectMapper();
         String json = objectMapper.writeValueAsString(result);
         
         PrintWriter writer = response.getWriter();

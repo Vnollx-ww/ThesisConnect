@@ -48,8 +48,6 @@
         <guava.version>32.1.3-jre</guava.version>
         <lombok.version>1.18.32</lombok.version>
         <validation-api.version>3.0.2</validation-api.version>
-        <javax.mail.version>1.4.7</javax.mail.version>
-        <commons-email.version>1.5</commons-email.version>
         <jbcrypt.version>0.4</jbcrypt.version>
         <langchain4j.version>0.31.0</langchain4j.version>
     </properties>
@@ -64,6 +62,10 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-thymeleaf</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
         <!-- 测试支持：包含JUnit, Hamcrest等测试库 -->
         <dependency>
@@ -198,18 +200,6 @@
             <groupId>jakarta.validation</groupId>
             <artifactId>jakarta.validation-api</artifactId>
             <version>${validation-api.version}</version>
-        </dependency>
-        <!-- Java Mail：邮件发送 -->
-        <dependency>
-            <groupId>javax.mail</groupId>
-            <artifactId>mail</artifactId>
-            <version>${javax.mail.version}</version>
-        </dependency>
-        <!-- Apache Commons Email：简化邮件发送 -->
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-email</artifactId>
-            <version>${commons-email.version}</version>
         </dependency>
         <!-- jBcrypt：密码加密工具 -->
         <dependency>

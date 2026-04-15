@@ -2,10 +2,14 @@ package com.example.thesisconnectback.controller;
 
 import com.example.thesisconnectback.common.Result;
 import com.example.thesisconnectback.entity.User;
+import com.example.thesisconnectback.mail.MailNotificationService;
+import com.example.thesisconnectback.service.SystemLogService;
+import com.example.thesisconnectback.service.TokenBlacklistService;
 import com.example.thesisconnectback.service.UserService;
 import com.example.thesisconnectback.util.JwtUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,6 +30,15 @@ public class AuthController {
 
     @Autowired
     private JwtUtil jwtUtil;
+
+    @Autowired
+    private TokenBlacklistService tokenBlacklistService;
+
+    @Autowired
+    private SystemLogService systemLogService;
+
+    @Autowired
+    private MailNotificationService mailNotificationService;
 
     /**
      * 用户注册
@@ -62,6 +75,11 @@ public class AuthController {
             return Result.badRequest("密码长度不能少于6位");
         }
 
+        // 开放注册仅允许学生、教师，禁止自助注册管理员
+        if (!"student".equals(role) && !"teacher".equals(role)) {
+            return Result.badRequest("角色无效，仅支持学生或教师注册");
+        }
+
         try {
             // 检查用户名是否已存在
             User existingUser = userService.findByUsername(username);
@@ -90,6 +108,13 @@ public class AuthController {
 
             boolean success = userService.register(newUser);
             if (success) {
+                if (StringUtils.hasText(email)) {
+                    try {
+                        mailNotificationService.sendRegistrationWelcome(email, realName);
+                    } catch (Exception e) {
+                        log.warn("注册成功但发送欢迎邮件失败 email={}: {}", email, e.getMessage());
+                    }
+                }
                 // 清除密码信息
                 newUser.setPassword(null);
                 return Result.success("注册成功", newUser);
@@ -98,7 +123,7 @@ public class AuthController {
             }
         } catch (Exception e) {
             log.error("注册失败：", e);
-            return Result.error("注册失败：" + e.getMessage());
+            return Result.error("注册失败，请稍后重试");
         }
     }
 
@@ -106,7 +131,7 @@ public class AuthController {
      * 用户登录
      */
     @PostMapping("/login")
-    public Result<Map<String, Object>> login(@RequestBody Map<String, String> loginForm) {
+    public Result<Map<String, Object>> login(@RequestBody Map<String, String> loginForm, HttpServletRequest request) {
         String username = loginForm.get("username");
         String password = loginForm.get("password");
         String role = loginForm.get("role");
@@ -134,11 +159,19 @@ public class AuthController {
             // 生成JWT token
             String token = jwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole());
 
+            user.setPassword(null);
+
             // 返回用户信息和token
             Map<String, Object> data = new HashMap<>();
             data.put("token", token);
             data.put("user", user);
             data.put("role", user.getRole());
+
+            try {
+                systemLogService.saveLog(user.getId(), user.getUsername(), "LOGIN", "用户登录成功", request);
+            } catch (Exception e) {
+                log.warn("登录成功但写系统日志失败 userId={}: {}", user.getId(), e.getMessage());
+            }
 
             return Result.success("登录成功", data);
         } catch (Exception e) {
@@ -228,7 +261,7 @@ public class AuthController {
             }
         } catch (Exception e) {
             log.error("更新用户信息失败：", e);
-            return Result.error("更新用户信息失败：" + e.getMessage());
+            return Result.error("更新用户信息失败，请稍后重试");
         }
     }
 
@@ -236,8 +269,19 @@ public class AuthController {
      * 用户登出
      */
     @PostMapping("/logout")
-    public Result<Void> logout() {
-        // JWT是无状态的，登出只需要前端删除token即可
+    public Result<Void> logout(HttpServletRequest request) {
+        String authHeader = request.getHeader(jwtUtil.getHeader());
+        String token = jwtUtil.getTokenFromHeader(authHeader);
+        if (token != null) {
+            tokenBlacklistService.blacklist(token);
+        }
+        Long userId = (Long) request.getAttribute("userId");
+        String username = (String) request.getAttribute("username");
+        try {
+            systemLogService.saveLog(userId, username != null ? username : "", "LOGOUT", "用户登出", request);
+        } catch (Exception e) {
+            log.warn("登出时写系统日志失败 userId={}: {}", userId, e.getMessage());
+        }
         return Result.success("登出成功");
     }
 

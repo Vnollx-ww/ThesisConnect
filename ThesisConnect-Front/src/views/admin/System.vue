@@ -267,6 +267,17 @@
 </template>
 
 <script>
+import request from '@/utils/request'
+
+function toIsoLocal(s) {
+  if (!s) return ''
+  return String(s).trim().replace(' ', 'T')
+}
+function fromIsoLocal(s) {
+  if (!s) return ''
+  return String(s).includes('T') ? String(s).replace('T', ' ') : String(s)
+}
+
 export default {
   name: 'AdminSystem',
   data() {
@@ -334,7 +345,28 @@ export default {
       }
     }
   },
+  async mounted() {
+    await this.loadTopicConfigFromServer()
+  },
   methods: {
+    async loadTopicConfigFromServer() {
+      try {
+        const res = await request({ url: '/api/admin/system-config', method: 'get' })
+        const m = res.data || {}
+        if (m.selection_start_time) {
+          this.topicSettings.selectionStartTime = fromIsoLocal(m.selection_start_time)
+        }
+        if (m.selection_end_time) {
+          this.topicSettings.selectionEndTime = fromIsoLocal(m.selection_end_time)
+        }
+        if (m.max_selections_per_student) {
+          const n = parseInt(m.max_selections_per_student, 10)
+          if (!isNaN(n)) this.topicSettings.maxSelections = n
+        }
+      } catch (e) {
+        /* 无权限或网络错误时保留本地默认 */
+      }
+    },
     handleMenuSelect(index) {
       this.activeMenu = index;
     },
@@ -344,9 +376,21 @@ export default {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning'
-      }).then(() => {
-        // 这里应该调用API保存设置
-        this.$message.success('设置保存成功！');
+      }).then(async () => {
+        try {
+          await request({
+            url: '/api/admin/system-config',
+            method: 'put',
+            data: {
+              selection_start_time: toIsoLocal(this.topicSettings.selectionStartTime),
+              selection_end_time: toIsoLocal(this.topicSettings.selectionEndTime),
+              max_selections_per_student: String(this.topicSettings.maxSelections)
+            }
+          })
+          this.$message.success('设置保存成功！')
+        } catch (err) {
+          this.$message.error((err && err.message) || '保存失败')
+        }
       }).catch(() => {});
     },
     

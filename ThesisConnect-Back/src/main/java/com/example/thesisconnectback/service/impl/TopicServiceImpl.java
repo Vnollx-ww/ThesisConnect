@@ -229,12 +229,20 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
         return count(queryWrapper);
     }
 
+    private static int clampListLimit(int limit) {
+        if (limit < 1) {
+            return 10;
+        }
+        return Math.min(limit, 100);
+    }
+
     @Override
     public List<Map<String, Object>> getRecentTopics(int limit) {
+        int safe = clampListLimit(limit);
         QueryWrapper<Topic> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("deleted", 0)
                    .orderByDesc("create_time")
-                   .last("LIMIT " + limit);
+                   .last("LIMIT " + safe);
         List<Topic> topics = list(queryWrapper);
         return topics.stream().map(topic -> {
             Map<String, Object> map = new HashMap<>();

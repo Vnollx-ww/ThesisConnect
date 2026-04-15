@@ -293,5 +293,15 @@ CREATE INDEX idx_selection_create_time ON sys_selection(create_time);
 CREATE INDEX idx_document_create_time ON sys_document(create_time);
 CREATE INDEX idx_progress_create_time ON sys_progress(create_time);
 
+-- 系统键值配置（选题时间窗、志愿数等）
+CREATE TABLE IF NOT EXISTS sys_system_config (
+    config_key VARCHAR(64) NOT NULL PRIMARY KEY COMMENT '配置键',
+    config_value TEXT COMMENT '配置值',
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='系统键值配置';
+
+-- 选题唯一约束（同一学生对同一课题仅一条有效记录；由迁移脚本在已有库上幂等添加）
+-- ALTER TABLE sys_selection ADD UNIQUE INDEX uk_student_topic (student_id, topic_id);
+
 -- 完成数据库初始化
 SELECT 'Database initialization completed successfully!' AS message;

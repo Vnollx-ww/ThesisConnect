@@ -263,6 +263,14 @@ public class StatsController {
         }
     }
 
+    private static int clampListLimit(Integer limit) {
+        int n = limit == null ? 10 : limit;
+        if (n < 1) {
+            return 10;
+        }
+        return Math.min(n, 100);
+    }
+
     /**
      * 获取最近活动
      */
@@ -274,10 +282,12 @@ public class StatsController {
                 return Result.forbidden("权限不足");
             }
 
+            int safeLimit = clampListLimit(limit);
+
             List<Map<String, Object>> activities = new ArrayList<>();
 
             // 获取最近注册的用户
-            List<Map<String, Object>> recentUsers = userService.getRecentUsers(limit);
+            List<Map<String, Object>> recentUsers = userService.getRecentUsers(safeLimit);
             for (Map<String, Object> user : recentUsers) {
                 Map<String, Object> activity = new HashMap<>();
                 activity.put("title", "新用户注册");
@@ -288,7 +298,7 @@ public class StatsController {
             }
 
             // 获取最近发布的课题
-            List<Map<String, Object>> recentTopics = topicService.getRecentTopics(limit);
+            List<Map<String, Object>> recentTopics = topicService.getRecentTopics(safeLimit);
             for (Map<String, Object> topic : recentTopics) {
                 Map<String, Object> activity = new HashMap<>();
                 activity.put("title", "课题发布");
@@ -299,7 +309,7 @@ public class StatsController {
             }
 
             // 获取最近选题记录
-            List<Map<String, Object>> recentSelections = selectionService.getRecentSelections(limit);
+            List<Map<String, Object>> recentSelections = selectionService.getRecentSelections(safeLimit);
             for (Map<String, Object> selection : recentSelections) {
                 Map<String, Object> activity = new HashMap<>();
                 activity.put("title", "选题成功");
@@ -318,7 +328,7 @@ public class StatsController {
                         if (timeB == null) return -1;
                         return timeB.toString().compareTo(timeA.toString());
                     })
-                    .limit(limit)
+                    .limit(safeLimit)
                     .collect(Collectors.toList());
 
             return Result.success(result);

@@ -4,12 +4,22 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.thesisconnectback.common.Result;
 import com.example.thesisconnectback.entity.Selection;
+import com.example.thesisconnectback.entity.Topic;
+import com.example.thesisconnectback.entity.User;
+import com.example.thesisconnectback.exception.BusinessException;
+import com.example.thesisconnectback.mail.MailNotificationService;
+import com.example.thesisconnectback.service.UserService;
 import com.example.thesisconnectback.service.SelectionService;
+import com.example.thesisconnectback.service.SystemLogService;
+import com.example.thesisconnectback.service.TopicService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.util.StringUtils;
+
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -25,6 +35,18 @@ public class SelectionController {
     @Autowired
     private SelectionService selectionService;
 
+    @Autowired
+    private TopicService topicService;
+
+    @Autowired
+    private SystemLogService systemLogService;
+
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private MailNotificationService mailNotificationService;
+
     /**
      * 获取选题列表（分页）
      */
@@ -35,29 +57,55 @@ public class SelectionController {
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Long studentId,
             @RequestParam(required = false) Long teacherId,
-            @RequestParam(required = false) Long topicId) {
+            @RequestParam(required = false) Long topicId,
+            HttpServletRequest request) {
         try {
+            String role = (String) request.getAttribute("role");
+            Long userId = (Long) request.getAttribute("userId");
+            if (role == null || userId == null) {
+                return Result.forbidden("权限不足");
+            }
+
             Page<Selection> pageParam = new Page<>(page, size);
             QueryWrapper<Selection> queryWrapper = new QueryWrapper<>();
+
+            // 非管理员只能查看与本人相关的选题，忽略越权筛选参数
+            if ("student".equals(role)) {
+                queryWrapper.eq("student_id", userId);
+            } else if ("teacher".equals(role)) {
+                queryWrapper.eq("teacher_id", userId);
+            } else if (!"admin".equals(role)) {
+                return Result.forbidden("权限不足");
+            }
 
             // 状态筛选
             if (status != null && !status.isEmpty()) {
                 queryWrapper.eq("status", status);
             }
 
-            // 学生ID筛选
-            if (studentId != null) {
+            // 学生ID筛选（仅管理员）
+            if ("admin".equals(role) && studentId != null) {
                 queryWrapper.eq("student_id", studentId);
             }
 
-            // 教师ID筛选
-            if (teacherId != null) {
+            // 教师ID筛选（仅管理员）
+            if ("admin".equals(role) && teacherId != null) {
                 queryWrapper.eq("teacher_id", teacherId);
             }
 
             // 课题ID筛选
             if (topicId != null) {
-                queryWrapper.eq("topic_id", topicId);
+                if ("admin".equals(role)) {
+                    queryWrapper.eq("topic_id", topicId);
+                } else if ("teacher".equals(role)) {
+                    Topic topic = topicService.getById(topicId);
+                    if (topic == null || !userId.equals(topic.getTeacherId())) {
+                        return Result.forbidden("权限不足");
+                    }
+                    queryWrapper.eq("topic_id", topicId);
+                } else if ("student".equals(role)) {
+                    queryWrapper.eq("topic_id", topicId);
+                }
             }
 
             queryWrapper.orderByDesc("create_time");
@@ -74,14 +122,21 @@ public class SelectionController {
      * 获取选题详情
      */
     @GetMapping("/{id}")
-    public Result<Selection> getSelectionById(@PathVariable Long id) {
+    public Result<Selection> getSelectionById(@PathVariable Long id, HttpServletRequest request) {
         try {
+            String role = (String) request.getAttribute("role");
+            Long userId = (Long) request.getAttribute("userId");
             Selection selection = selectionService.getById(id);
-            if (selection != null) {
-                return Result.success(selection);
-            } else {
+            if (selection == null) {
                 return Result.notFound("选题记录不存在");
             }
+            if (!"admin".equals(role)) {
+                boolean allowed = userId != null && (userId.equals(selection.getStudentId()) || userId.equals(selection.getTeacherId()));
+                if (!allowed) {
+                    return Result.forbidden("权限不足");
+                }
+            }
+            return Result.success(selection);
         } catch (Exception e) {
             log.error("获取选题详情失败：", e);
             return Result.error("获取选题详情失败");
@@ -107,31 +162,29 @@ public class SelectionController {
                 return Result.badRequest("课题ID不能为空");
             }
 
-            // 检查学生是否已选择课题
-            if (selectionService.hasSelectedTopic(userId)) {
-                return Result.error("您已经选择过课题了");
-            }
+            selectionService.validateSelectTopicRequest(userId, topicId);
 
-            // 检查课题是否已满员
-            if (selectionService.isTopicFull(topicId)) {
-                return Result.error("该课题已满员");
-            }
-
-            boolean success = selectionService.selectTopic(userId, topicId);
-            if (success) {
-                return Result.success("选题成功");
-            } else {
-                // 再次检查是否是因为被拒绝
-                try {
-                     // 反射调用mapper检查，或者简单返回通用错误
-                     // 这里简单处理，如果返回false且不是以上原因，可能是被拒绝了
-                     // 更好的方式是在service抛出异常或返回具体错误码，这里暂时通过Result返回通用失败
-                     // 实际上我们可以优化service让它抛出异常
-                     return Result.error("选题失败，您可能已被该课题拒绝或不满足其他条件");
-                } catch (Exception e) {
-                    return Result.error("选题失败");
+            Selection created = selectionService.selectTopic(userId, topicId);
+            try {
+                Topic topic = topicService.getById(topicId);
+                if (topic != null) {
+                    User teacher = userService.getById(topic.getTeacherId());
+                    User student = userService.getById(userId);
+                    if (teacher != null && StringUtils.hasText(teacher.getEmail())) {
+                        mailNotificationService.sendTeacherNewSelectionApplication(
+                                teacher.getEmail(),
+                                teacher.getRealName() != null ? teacher.getRealName() : teacher.getUsername(),
+                                student != null && student.getRealName() != null ? student.getRealName() : "",
+                                topic.getTitle(),
+                                LocalDateTime.now());
+                    }
                 }
+            } catch (Exception e) {
+                log.warn("选题成功但通知教师邮件失败 topicId={} studentId={}: {}", topicId, userId, e.getMessage());
             }
+            return Result.success("选题成功", created);
+        } catch (BusinessException e) {
+            return Result.error(e.getCode() != null ? e.getCode() : 400, e.getMessage());
         } catch (Exception e) {
             log.error("选择课题失败：", e);
             return Result.error("选择课题失败");
@@ -194,8 +247,50 @@ public class SelectionController {
                 return Result.badRequest("审核状态无效");
             }
 
+            Long userId = (Long) request.getAttribute("userId");
+            Selection selection = selectionService.getById(id);
+            if (selection == null) {
+                return Result.notFound("选题记录不存在");
+            }
+            if ("teacher".equals(role) && (userId == null || !userId.equals(selection.getTeacherId()))) {
+                return Result.forbidden("只能审核本人课题的选题申请");
+            }
+
             boolean success = selectionService.reviewSelection(id, status, comment);
             if (success) {
+                try {
+                    systemLogService.saveLog((Long) request.getAttribute("userId"), (String) request.getAttribute("username"),
+                            "REVIEW_SELECTION", "审核选题 id=" + id + " -> " + status, request);
+                } catch (Exception e) {
+                    log.warn("审核选题后写系统日志失败 selectionId={}: {}", id, e.getMessage());
+                }
+                try {
+                    Selection sel = selectionService.getById(id);
+                    if (sel != null) {
+                        User student = userService.getById(sel.getStudentId());
+                        User teacher = userService.getById(sel.getTeacherId());
+                        String tName = teacher != null && teacher.getRealName() != null ? teacher.getRealName() : "";
+                        if (student != null && StringUtils.hasText(student.getEmail())) {
+                            if ("approved".equals(status)) {
+                                mailNotificationService.sendStudentSelectionApproved(
+                                        student.getEmail(),
+                                        student.getRealName() != null ? student.getRealName() : student.getUsername(),
+                                        sel.getTopicTitle(),
+                                        tName,
+                                        comment);
+                            } else {
+                                mailNotificationService.sendStudentSelectionRejected(
+                                        student.getEmail(),
+                                        student.getRealName() != null ? student.getRealName() : student.getUsername(),
+                                        sel.getTopicTitle(),
+                                        tName,
+                                        comment);
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    log.warn("审核选题后通知学生邮件失败 selectionId={}: {}", id, e.getMessage());
+                }
                 return Result.success("审核完成");
             } else {
                 return Result.error("审核失败");
@@ -219,8 +314,7 @@ public class SelectionController {
                 return Result.notFound("选题记录不存在");
             }
             
-            // 检查权限：只有申请人本人可以确认
-            if (!selection.getStudentId().equals(userId)) {
+            if (userId == null || !userId.equals(selection.getStudentId())) {
                 return Result.forbidden("只能确认自己的申请");
             }
             
@@ -288,9 +382,8 @@ public class SelectionController {
     @PostMapping("/{id}/grade")
     public Result<Void> gradeSelection(@PathVariable Long id, @RequestBody Map<String, String> gradeForm, HttpServletRequest request) {
         try {
-            // 检查权限（只有教师可以打分）
             String role = (String) request.getAttribute("role");
-            if (!"teacher".equals(role)) {
+            if (!"teacher".equals(role) && !"admin".equals(role)) {
                 return Result.forbidden("权限不足");
             }
 
@@ -299,6 +392,15 @@ public class SelectionController {
 
             if (grade == null || grade.isEmpty()) {
                 return Result.badRequest("成绩不能为空");
+            }
+
+            Long userId = (Long) request.getAttribute("userId");
+            Selection sel = selectionService.getById(id);
+            if (sel == null) {
+                return Result.notFound("选题记录不存在");
+            }
+            if (!"admin".equals(role) && (userId == null || !userId.equals(sel.getTeacherId()))) {
+                return Result.forbidden("只能评价本人指导的选题");
             }
 
             boolean success = selectionService.gradeSelection(id, grade, evaluation);
@@ -361,8 +463,19 @@ public class SelectionController {
      * 根据课题ID获取选题记录
      */
     @GetMapping("/topic/{topicId}")
-    public Result<List<Selection>> getSelectionsByTopic(@PathVariable Long topicId) {
+    public Result<List<Selection>> getSelectionsByTopic(@PathVariable Long topicId, HttpServletRequest request) {
         try {
+            String role = (String) request.getAttribute("role");
+            Long userId = (Long) request.getAttribute("userId");
+            Topic topic = topicService.getById(topicId);
+            if (topic == null) {
+                return Result.notFound("课题不存在");
+            }
+            if (!"admin".equals(role)) {
+                if (!"teacher".equals(role) || userId == null || !userId.equals(topic.getTeacherId())) {
+                    return Result.forbidden("权限不足");
+                }
+            }
             List<Selection> selections = selectionService.findByTopicId(topicId);
             return Result.success(selections);
         } catch (Exception e) {

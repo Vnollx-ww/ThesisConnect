@@ -280,15 +280,23 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         return count(queryWrapper);
     }
 
+    private static int clampListLimit(int limit) {
+        if (limit < 1) {
+            return 10;
+        }
+        return Math.min(limit, 100);
+    }
+
     /**
      * Get recent users
      */
     @Override
     public List<Map<String, Object>> getRecentUsers(int limit) {
+        int safe = clampListLimit(limit);
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("deleted", 0)
                    .orderByDesc("create_time")
-                   .last("LIMIT " + limit);
+                   .last("LIMIT " + safe);
         List<User> users = list(queryWrapper);
         return users.stream().map(user -> {
             Map<String, Object> map = new HashMap<>();

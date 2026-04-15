@@ -26,6 +26,7 @@ const router = new VueRouter({
         {
             path: '/student',
             name: '学生系统',
+            meta: { roles: ['student'] },
             component: Layout,
             redirect: '/student/topics',
             children:[
@@ -52,6 +53,7 @@ const router = new VueRouter({
         {
             path: '/teacher',
             name: '教师系统',
+            meta: { roles: ['teacher'] },
             component: Layout,
             redirect: '/teacher/topics',
             children:[
@@ -83,6 +85,7 @@ const router = new VueRouter({
         {
             path: '/admin',
             name: '管理员系统',
+            meta: { roles: ['admin'] },
             component: Layout,
             redirect: '/admin/dashboard',
             children:[
@@ -106,6 +109,11 @@ const router = new VueRouter({
                     path: 'system',
                     name: '系统设置',
                     component: () => import('@/views/admin/System.vue')
+                },
+                {
+                    path: 'system-logs',
+                    name: '操作日志',
+                    component: () => import('@/views/admin/SystemLogs.vue')
                 }
             ]
         },
@@ -143,8 +151,26 @@ router.beforeEach((to, from, next) => {
         next('/login');
         return;
     }
-    
-    // 有token，正常访问
+
+    // 按角色限制各门户路由（防止手动改 URL 进入他人工作台）
+    const roleRecord = to.matched.slice().reverse().find(r => r.meta && r.meta.roles);
+    if (roleRecord && roleRecord.meta.roles) {
+        const allowed = roleRecord.meta.roles;
+        const userRole = localStorage.getItem('role');
+        if (!userRole || !allowed.includes(userRole)) {
+            if (userRole === 'student') {
+                next('/student/topics');
+            } else if (userRole === 'teacher') {
+                next('/teacher/topics');
+            } else if (userRole === 'admin') {
+                next('/admin/dashboard');
+            } else {
+                next('/login');
+            }
+            return;
+        }
+    }
+
     next();
 });
 

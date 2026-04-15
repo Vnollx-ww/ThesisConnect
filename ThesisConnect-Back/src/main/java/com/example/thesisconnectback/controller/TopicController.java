@@ -6,6 +6,7 @@ import com.example.thesisconnectback.common.Result;
 import com.example.thesisconnectback.entity.Topic;
 import com.example.thesisconnectback.entity.User;
 import com.example.thesisconnectback.entity.Selection;
+import com.example.thesisconnectback.mail.MailNotificationService;
 import com.example.thesisconnectback.service.SelectionService;
 import com.example.thesisconnectback.service.TopicService;
 import com.example.thesisconnectback.service.UserService;
@@ -33,6 +34,9 @@ public class TopicController {
     private UserService userService;
     @Autowired
     private SelectionService selectionService;
+
+    @Autowired
+    private MailNotificationService mailNotificationService;
 
     /**
      * 获取课题列表（分页）
@@ -133,9 +137,18 @@ public class TopicController {
 
             Long userId = (Long) request.getAttribute("userId");
             topic.setTeacherId(userId);
-            topic.setTeacherName((String) request.getAttribute("username"));
+            User teacherUser = userService.getById(userId);
+            if (teacherUser != null && teacherUser.getRealName() != null && !teacherUser.getRealName().isBlank()) {
+                topic.setTeacherName(teacherUser.getRealName());
+            } else {
+                topic.setTeacherName((String) request.getAttribute("username"));
+            }
             boolean success = topicService.publishTopic(topic);
             if (success) {
+                try {
+                    mailNotificationService.notifyStudentsNewTopicPublished(topic);
+                } catch (Exception ignore) {
+                }
                 return Result.success("课题发布成功", topic);
             } else {
                 return Result.error("课题发布失败");

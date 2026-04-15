@@ -74,6 +74,12 @@ public interface SelectionMapper extends BaseMapper<Selection> {
      */
     @Select("SELECT COUNT(*) FROM sys_selection WHERE student_id = #{studentId} AND topic_id = #{topicId} AND status = 'rejected' AND deleted = 0")
     int countRejectedByStudentAndTopic(@Param("studentId") Long studentId, @Param("topicId") Long topicId);
+
+    /**
+     * 学生当前有效选题申请数（不含已拒绝，用于志愿上限）
+     */
+    @Select("SELECT COUNT(*) FROM sys_selection WHERE student_id = #{studentId} AND deleted = 0 AND status != 'rejected'")
+    int countNonRejectedByStudentId(@Param("studentId") Long studentId);
     
     /**
      * 统计教师指导的选题数量

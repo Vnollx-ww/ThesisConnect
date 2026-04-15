@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.thesisconnectback.common.Result;
 import com.example.thesisconnectback.entity.User;
+import com.example.thesisconnectback.service.SystemLogService;
 import com.example.thesisconnectback.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.mindrot.jbcrypt.BCrypt;
@@ -28,6 +29,9 @@ public class UserController {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private SystemLogService systemLogService;
+
     /**
      * 获取用户列表（分页）
      */
@@ -37,8 +41,14 @@ public class UserController {
             @RequestParam(defaultValue = "10") Integer size,
             @RequestParam(required = false) String role,
             @RequestParam(required = false) Integer status,
-            @RequestParam(required = false) String keyword) {
+            @RequestParam(required = false) String keyword,
+            HttpServletRequest request) {
         try {
+            String requestRole = (String) request.getAttribute("role");
+            if (!"admin".equals(requestRole)) {
+                return Result.forbidden("权限不足");
+            }
+
             Page<User> pageParam = new Page<>(page, size);
             QueryWrapper<User> queryWrapper = new QueryWrapper<>();
 
@@ -80,8 +90,14 @@ public class UserController {
      * 获取用户详情
      */
     @GetMapping("/{id}")
-    public Result<User> getUserById(@PathVariable Long id) {
+    public Result<User> getUserById(@PathVariable Long id, HttpServletRequest request) {
         try {
+            String requestRole = (String) request.getAttribute("role");
+            Long currentUserId = (Long) request.getAttribute("userId");
+            if (!"admin".equals(requestRole) && (currentUserId == null || !currentUserId.equals(id))) {
+                return Result.forbidden("权限不足");
+            }
+
             User user = userService.getById(id);
             if (user != null) {
                 user.setPassword(null);
@@ -200,6 +216,11 @@ public class UserController {
 
             boolean success = userService.removeById(id);
             if (success) {
+                try {
+                    systemLogService.saveLog((Long) request.getAttribute("userId"), (String) request.getAttribute("username"),
+                            "DELETE_USER", "删除用户 id=" + id, request);
+                } catch (Exception ignore) {
+                }
                 return Result.success("用户删除成功");
             } else {
                 return Result.error("用户删除失败");
