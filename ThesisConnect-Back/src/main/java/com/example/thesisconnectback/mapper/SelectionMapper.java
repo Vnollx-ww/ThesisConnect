@@ -46,6 +46,12 @@ public interface SelectionMapper extends BaseMapper<Selection> {
     int countByStudentId(@Param("studentId") Long studentId);
 
     /**
+     * 课题已占用名额：除 rejected 外的所有选题（pending/approved/confirmed/...），用于容量控制
+     */
+    @Select("SELECT COUNT(*) FROM sys_selection WHERE topic_id = #{topicId} AND deleted = 0 AND status != 'rejected'")
+    int countPipelineByTopicId(@Param("topicId") Long topicId);
+
+    /**
      * 检查课题是否已满员（只统计已确认、进行中或已完成的）
      */
     @Select("SELECT COUNT(*) FROM sys_selection WHERE topic_id = #{topicId} AND status IN ('confirmed', 'active', 'completed') AND deleted = 0")
@@ -80,6 +86,20 @@ public interface SelectionMapper extends BaseMapper<Selection> {
      */
     @Select("SELECT COUNT(*) FROM sys_selection WHERE student_id = #{studentId} AND deleted = 0 AND status != 'rejected'")
     int countNonRejectedByStudentId(@Param("studentId") Long studentId);
+
+    /**
+     * 学生对同一教师名下课题的有效申请数（不含 rejected），用于「同一教师上限」
+     */
+    @Select("SELECT COUNT(*) FROM sys_selection WHERE student_id = #{studentId} AND teacher_id = #{teacherId} AND deleted = 0 AND status != 'rejected'")
+    int countNonRejectedByStudentAndTeacher(@Param("studentId") Long studentId, @Param("teacherId") Long teacherId);
+
+    /** 教师待审核申请数（站内待办汇总） */
+    @Select("SELECT COUNT(*) FROM sys_selection WHERE teacher_id = #{teacherId} AND deleted = 0 AND status = 'pending'")
+    int countPendingByTeacherId(@Param("teacherId") Long teacherId);
+
+    /** 学生已通过待确认的申请数 */
+    @Select("SELECT COUNT(*) FROM sys_selection WHERE student_id = #{studentId} AND deleted = 0 AND status = 'approved'")
+    int countApprovedAwaitingConfirmByStudentId(@Param("studentId") Long studentId);
     
     /**
      * 统计教师指导的选题数量

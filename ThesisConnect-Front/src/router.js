@@ -45,6 +45,11 @@ const router = new VueRouter({
                     path: 'profile',
                     name: '个人信息',
                     component: () => import('@/views/student/Profile.vue')
+                },
+                {
+                    path: 'notifications',
+                    name: 'student-notifications',
+                    component: () => import('@/views/common/Notifications.vue')
                 }
             ]
         },
@@ -77,6 +82,11 @@ const router = new VueRouter({
                     path: 'profile',
                     name: '个人设置',
                     component: () => import('@/views/teacher/Profile.vue')
+                },
+                {
+                    path: 'notifications',
+                    name: 'teacher-notifications',
+                    component: () => import('@/views/common/Notifications.vue')
                 }
             ]
         },
@@ -114,6 +124,11 @@ const router = new VueRouter({
                     path: 'system-logs',
                     name: '操作日志',
                     component: () => import('@/views/admin/SystemLogs.vue')
+                },
+                {
+                    path: 'notifications',
+                    name: 'admin-notifications',
+                    component: () => import('@/views/common/Notifications.vue')
                 }
             ]
         },

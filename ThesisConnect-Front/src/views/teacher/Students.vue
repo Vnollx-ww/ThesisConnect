@@ -99,14 +99,36 @@
     <div class="students-section">
       <div class="section-header">
         <h3>学生列表</h3>
-        <el-button type="primary" @click="exportStudents">
-          <i class="el-icon-download"></i>
-          导出数据
-        </el-button>
+        <div class="section-actions">
+          <el-button
+            v-if="multipleSelection.length"
+            type="success"
+            size="small"
+            @click="openBatchReview('approved')">
+            批量通过 ({{ multipleSelection.length }})
+          </el-button>
+          <el-button
+            v-if="multipleSelection.length"
+            type="danger"
+            size="small"
+            plain
+            @click="openBatchReview('rejected')">
+            批量拒绝
+          </el-button>
+          <el-button type="primary" @click="exportStudents">
+            <i class="el-icon-download"></i>
+            导出数据
+          </el-button>
+        </div>
       </div>
       
       <div class="students-table">
-        <el-table :data="filteredStudents" style="width: 100%">
+        <el-table
+          ref="studentsTable"
+          :data="filteredStudents"
+          style="width: 100%"
+          @selection-change="handleSelectionChange">
+          <el-table-column type="selection" width="48" :selectable="row => row.selection_status === 'pending'" />
           <el-table-column prop="real_name" label="姓名" width="100"></el-table-column>
           <el-table-column prop="student_id" label="学号" width="120"></el-table-column>
           <el-table-column prop="topic_title" label="课题" width="200">
@@ -547,6 +569,24 @@
       </span>
     </el-dialog>
 
+    <!-- 批量审核选题 -->
+    <el-dialog
+      :title="batchStatus === 'approved' ? '批量通过选题' : '批量拒绝选题'"
+      :visible.sync="batchReviewVisible"
+      width="480px"
+      append-to-body>
+      <p class="batch-hint">已选 <strong>{{ multipleSelection.length }}</strong> 条待审核记录。</p>
+      <el-input
+        v-model="batchComment"
+        type="textarea"
+        :rows="3"
+        placeholder="审核意见（可选，将应用于本批每条记录）" />
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="batchReviewVisible = false">取消</el-button>
+        <el-button type="primary" @click="submitBatchReview">确定</el-button>
+      </span>
+    </el-dialog>
+
     <!-- 进度审核拒绝原因对话框 -->
     <el-dialog
       title="拒绝进度更新"
@@ -633,7 +673,12 @@ export default {
         { id: 3, title: '智能家居控制系统' }
       ],
       
-      students: []
+      students: [],
+
+      multipleSelection: [],
+      batchReviewVisible: false,
+      batchStatus: 'approved',
+      batchComment: ''
     }
   },
   computed: {
@@ -725,6 +770,57 @@ export default {
       this.searchKeyword = '';
       this.statusFilter = '';
       this.topicFilter = '';
+    },
+
+    handleSelectionChange(rows) {
+      this.multipleSelection = rows || [];
+    },
+
+    openBatchReview(status) {
+      if (!this.multipleSelection.length) {
+        this.$message.warning('请先勾选待审核的学生');
+        return;
+      }
+      this.batchStatus = status;
+      this.batchComment = '';
+      this.batchReviewVisible = true;
+    },
+
+    async submitBatchReview() {
+      const ids = this.multipleSelection.map(r => r.selection_id).filter(id => id != null);
+      if (!ids.length) {
+        this.$message.warning('无有效的选题记录 ID');
+        return;
+      }
+      try {
+        const res = await selectionApi.batchReview({
+          selectionIds: ids,
+          status: this.batchStatus,
+          comment: this.batchComment || ''
+        });
+        if (res.code === 200) {
+          const data = res.data || {};
+          const fails = data.failures || [];
+          this.batchReviewVisible = false;
+          this.multipleSelection = [];
+          if (this.$refs.studentsTable) {
+            this.$refs.studentsTable.clearSelection();
+          }
+          if (fails.length) {
+            const msg = fails.map(f => (f.id != null ? `${f.id}: ${f.message}` : f.message)).join('；');
+            this.$message.warning(`部分未处理：${msg}`);
+          } else {
+            this.$message.success('批量审核已提交');
+          }
+          await this.loadStudents();
+          await this.loadStats();
+          this.$root.$emit('notifications-updated');
+        } else {
+          this.$message.error(res.message || '批量审核失败');
+        }
+      } catch (e) {
+        this.$message.error(e.message || '批量审核失败');
+      }
     },
     
     viewStudentDetail(student) {

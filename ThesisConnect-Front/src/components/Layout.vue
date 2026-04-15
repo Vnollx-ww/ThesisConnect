@@ -28,6 +28,10 @@
             <i class="el-icon-user"></i>
             <span slot="title">个人信息</span>
           </el-menu-item>
+          <el-menu-item index="/student/notifications">
+            <i class="el-icon-bell"></i>
+            <span slot="title">消息中心</span>
+          </el-menu-item>
         </template>
         
         <!-- 教师菜单 -->
@@ -47,6 +51,10 @@
           <el-menu-item index="/teacher/profile">
             <i class="el-icon-setting"></i>
             <span slot="title">个人设置</span>
+          </el-menu-item>
+          <el-menu-item index="/teacher/notifications">
+            <i class="el-icon-bell"></i>
+            <span slot="title">消息中心</span>
           </el-menu-item>
         </template>
         
@@ -71,6 +79,10 @@
           <el-menu-item index="/admin/system-logs">
             <i class="el-icon-document-copy"></i>
             <span slot="title">操作日志</span>
+          </el-menu-item>
+          <el-menu-item index="/admin/notifications">
+            <i class="el-icon-bell"></i>
+            <span slot="title">消息中心</span>
           </el-menu-item>
         </template>
       </el-menu>
@@ -99,6 +111,11 @@
         </div>
         
         <div class="header-right">
+          <el-badge :value="unreadCount" :max="99" :hidden="unreadCount === 0" class="notify-badge">
+            <el-button type="text" class="notify-btn" @click="goNotifications" title="消息中心">
+              <i class="el-icon-bell"></i>
+            </el-button>
+          </el-badge>
           <el-dropdown @command="handleCommand">
             <div class="user-info">
               <img v-if="avatar" :src="avatar" alt="头像" class="avatar">
@@ -124,7 +141,7 @@
 </template>
 
 <script>
-import { authApi } from '@/api/index.js'
+import { authApi, notificationApi } from '@/api/index.js'
 
 export default {
   name: 'Layout',
@@ -134,11 +151,17 @@ export default {
       userRole: this.getUserRoleFromRoute(),
       username: '用户',
       avatar: '',
-      breadcrumbList: []
+      breadcrumbList: [],
+      unreadCount: 0
     }
   },
   async mounted() {
     await this.loadUserInfo();
+    await this.refreshUnreadBadge();
+    this.$root.$on('notifications-updated', this.refreshUnreadBadge);
+  },
+  beforeDestroy() {
+    this.$root.$off('notifications-updated', this.refreshUnreadBadge);
   },
   computed: {
     activeMenu() {
@@ -150,6 +173,7 @@ export default {
       handler(route) {
         this.updateBreadcrumb(route);
         this.userRole = this.getUserRoleFromRoute();
+        this.refreshUnreadBadge();
       },
       immediate: true
     }
@@ -190,6 +214,25 @@ export default {
       } catch (error) {
         console.error('获取用户信息失败:', error);
         this.username = '用户';
+      }
+    },
+
+    goNotifications() {
+      const r = this.userRole;
+      if (r === 'student') this.$router.push('/student/notifications');
+      else if (r === 'teacher') this.$router.push('/teacher/notifications');
+      else if (r === 'admin') this.$router.push('/admin/notifications');
+    },
+
+    async refreshUnreadBadge() {
+      if (!localStorage.getItem('token')) return;
+      try {
+        const res = await notificationApi.getUnreadCount();
+        if (res.code === 200 && res.data) {
+          this.unreadCount = Number(res.data.count) || 0;
+        }
+      } catch (e) {
+        this.unreadCount = 0;
       }
     },
     
@@ -343,6 +386,21 @@ export default {
 .header-right {
   display: flex;
   align-items: center;
+  gap: 8px;
+}
+
+.notify-badge {
+  margin-right: 8px;
+}
+
+.notify-btn {
+  font-size: 20px;
+  padding: 8px;
+  color: #606266;
+}
+
+.notify-btn:hover {
+  color: #409eff;
 }
 
 .user-info {

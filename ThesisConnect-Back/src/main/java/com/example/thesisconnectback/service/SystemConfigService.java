@@ -16,5 +16,11 @@ public interface SystemConfigService {
 
     int getMaxSelectionsPerStudent();
 
+    /** 是否允许跨专业选题；未配置默认 true */
+    boolean isAllowCrossMajor();
+
+    /** 同一学生对同一教师（名下课题）最多同时保留的非 rejected 申请数；未配置默认 99 */
+    int getMaxSelectionsPerTeacherPerStudent();
+
     Map<String, String> getPublicSelectionRules();
 }

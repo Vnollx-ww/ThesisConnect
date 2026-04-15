@@ -187,6 +187,37 @@ export const selectionApi = {
   // 获取选题统计
   getSelectionStats() {
     return request.get('/api/selections/stats')
+  },
+
+  // 批量审核 { selectionIds, status, comment }
+  batchReview(body) {
+    return request.post('/api/selections/batch-review', body)
+  }
+}
+
+// 无需登录的公开配置
+export const publicApi = {
+  getSelectionRules() {
+    return request.get('/api/public/selection-rules')
+  }
+}
+
+// 站内通知与待办
+export const notificationApi = {
+  getList(params) {
+    return request.get('/api/notifications', { params })
+  },
+  getUnreadCount() {
+    return request.get('/api/notifications/unread-count')
+  },
+  getPendingSummary() {
+    return request.get('/api/notifications/pending-summary')
+  },
+  markRead(id) {
+    return request.patch(`/api/notifications/${id}/read`)
+  },
+  markAllRead() {
+    return request.post('/api/notifications/read-all')
   }
 }
 

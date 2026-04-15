@@ -183,11 +183,26 @@ java -jar target/ThesisConnect-Back-0.0.1-SNAPSHOT.jar
 - `POST /api/selections` - 学生选择课题
 - `DELETE /api/selections/{id}` - 取消选择课题
 - `POST /api/selections/{id}/review` - 审核选题
+- `POST /api/selections/batch-review` - 批量审核（body: `selectionIds`, `status`, `comment`）
 - `PUT /api/selections/{id}/progress` - 更新进度
 - `GET /api/selections/student/{studentId}` - 获取学生选题记录
 - `GET /api/selections/teacher/{teacherId}` - 获取教师选题记录
 - `GET /api/selections/topic/{topicId}` - 获取课题选题记录
 - `GET /api/selections/stats` - 获取选题统计信息
+
+### 站内通知与待办（需登录）
+
+- `GET /api/notifications` - 通知分页（可选 `bizType`、`readFlag`：0/1）
+- `GET /api/notifications/unread-count` - 未读条数
+- `GET /api/notifications/pending-summary` - 待办汇总（教师待审、学生待确认、未读通知）
+- `PATCH /api/notifications/{id}/read` - 单条已读
+- `POST /api/notifications/read-all` - 全部已读
+
+### 公开配置
+
+- `GET /api/public/selection-rules` - 选题规则摘要（含 `selectionOpen`、`allow_cross_major`、`max_selections_per_teacher_per_student` 等）
+
+管理员可在 `PUT /api/admin/system-config` 中维护键：`selection_start_time`、`selection_end_time`、`max_selections_per_student`、`allow_cross_major`、`max_selections_per_teacher_per_student`。
 
 ## 默认账户
 

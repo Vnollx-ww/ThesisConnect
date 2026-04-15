@@ -8,6 +8,7 @@ import com.example.thesisconnectback.entity.Topic;
 import com.example.thesisconnectback.entity.User;
 import com.example.thesisconnectback.exception.BusinessException;
 import com.example.thesisconnectback.mail.MailNotificationService;
+import com.example.thesisconnectback.service.SiteNotificationService;
 import com.example.thesisconnectback.service.UserService;
 import com.example.thesisconnectback.service.SelectionService;
 import com.example.thesisconnectback.service.SystemLogService;
@@ -20,6 +21,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -46,6 +48,9 @@ public class SelectionController {
 
     @Autowired
     private MailNotificationService mailNotificationService;
+
+    @Autowired
+    private SiteNotificationService siteNotificationService;
 
     /**
      * 获取选题列表（分页）
@@ -178,6 +183,11 @@ public class SelectionController {
                                 topic.getTitle(),
                                 LocalDateTime.now());
                     }
+                    if (teacher != null) {
+                        String sname = student != null && student.getRealName() != null ? student.getRealName() : (student != null ? student.getUsername() : "");
+                        siteNotificationService.notifyUser(teacher.getId(), "SELECTION_SUBMITTED", "新的选题申请",
+                                sname + " 申请了您的课题「" + topic.getTitle() + "」。", "selection", created.getId());
+                    }
                 }
             } catch (Exception e) {
                 log.warn("选题成功但通知教师邮件失败 topicId={} studentId={}: {}", topicId, userId, e.getMessage());
@@ -267,26 +277,7 @@ public class SelectionController {
                 try {
                     Selection sel = selectionService.getById(id);
                     if (sel != null) {
-                        User student = userService.getById(sel.getStudentId());
-                        User teacher = userService.getById(sel.getTeacherId());
-                        String tName = teacher != null && teacher.getRealName() != null ? teacher.getRealName() : "";
-                        if (student != null && StringUtils.hasText(student.getEmail())) {
-                            if ("approved".equals(status)) {
-                                mailNotificationService.sendStudentSelectionApproved(
-                                        student.getEmail(),
-                                        student.getRealName() != null ? student.getRealName() : student.getUsername(),
-                                        sel.getTopicTitle(),
-                                        tName,
-                                        comment);
-                            } else {
-                                mailNotificationService.sendStudentSelectionRejected(
-                                        student.getEmail(),
-                                        student.getRealName() != null ? student.getRealName() : student.getUsername(),
-                                        sel.getTopicTitle(),
-                                        tName,
-                                        comment);
-                            }
-                        }
+                        notifyStudentReviewEmailAndInApp(sel, status, comment);
                     }
                 } catch (Exception e) {
                     log.warn("审核选题后通知学生邮件失败 selectionId={}: {}", id, e.getMessage());
@@ -501,6 +492,89 @@ public class SelectionController {
         } catch (Exception e) {
             log.error("获取选题统计信息失败：", e);
             return Result.error("获取选题统计信息失败");
+        }
+    }
+
+    /**
+     * 批量审核选题（教师/管理员）
+     */
+    @PostMapping("/batch-review")
+    @SuppressWarnings("unchecked")
+    public Result<Map<String, Object>> batchReview(@RequestBody Map<String, Object> body, HttpServletRequest request) {
+        try {
+            String role = (String) request.getAttribute("role");
+            if (!"teacher".equals(role) && !"admin".equals(role)) {
+                return Result.forbidden("权限不足");
+            }
+            String status = body.get("status") != null ? body.get("status").toString() : null;
+            String comment = body.get("comment") != null ? body.get("comment").toString() : null;
+            Object rawIds = body.get("selectionIds");
+            List<Long> selectionIds = new ArrayList<>();
+            if (rawIds instanceof List<?>) {
+                for (Object o : (List<?>) rawIds) {
+                    if (o instanceof Number) {
+                        selectionIds.add(((Number) o).longValue());
+                    }
+                }
+            }
+            Long userId = (Long) request.getAttribute("userId");
+            Map<String, Object> result = selectionService.batchReviewSelections(userId, role, selectionIds, status, comment);
+            List<Long> successIds = (List<Long>) result.get("successIds");
+            if (successIds != null) {
+                for (Long sid : successIds) {
+                    try {
+                        systemLogService.saveLog((Long) request.getAttribute("userId"), (String) request.getAttribute("username"),
+                                "REVIEW_SELECTION", "批量审核选题 id=" + sid + " -> " + status, request);
+                    } catch (Exception e) {
+                        log.warn("批量审核写系统日志失败 selectionId={}: {}", sid, e.getMessage());
+                    }
+                    try {
+                        Selection sel = selectionService.getById(sid);
+                        if (sel != null) {
+                            notifyStudentReviewEmailAndInApp(sel, status, comment);
+                        }
+                    } catch (Exception e) {
+                        log.warn("批量审核后通知学生失败 selectionId={}: {}", sid, e.getMessage());
+                    }
+                }
+            }
+            return Result.success("批量审核已处理", result);
+        } catch (Exception e) {
+            log.error("批量审核失败：", e);
+            return Result.error("批量审核失败");
+        }
+    }
+
+    private void notifyStudentReviewEmailAndInApp(Selection sel, String status, String comment) {
+        User student = userService.getById(sel.getStudentId());
+        User teacher = userService.getById(sel.getTeacherId());
+        String tName = teacher != null && teacher.getRealName() != null ? teacher.getRealName() : "";
+        if (student != null && StringUtils.hasText(student.getEmail())) {
+            if ("approved".equals(status)) {
+                mailNotificationService.sendStudentSelectionApproved(
+                        student.getEmail(),
+                        student.getRealName() != null ? student.getRealName() : student.getUsername(),
+                        sel.getTopicTitle(),
+                        tName,
+                        comment);
+            } else {
+                mailNotificationService.sendStudentSelectionRejected(
+                        student.getEmail(),
+                        student.getRealName() != null ? student.getRealName() : student.getUsername(),
+                        sel.getTopicTitle(),
+                        tName,
+                        comment);
+            }
+        }
+        if (student != null) {
+            if ("approved".equals(status)) {
+                siteNotificationService.notifyUser(student.getId(), "SELECTION_APPROVED", "选题申请已通过",
+                        "您的选题「" + sel.getTopicTitle() + "」已通过审核。", "selection", sel.getId());
+            } else {
+                String tail = StringUtils.hasText(comment) ? (" 原因说明：" + comment) : "";
+                siteNotificationService.notifyUser(student.getId(), "SELECTION_REJECTED", "选题申请未通过",
+                        "您的选题「" + sel.getTopicTitle() + "」未通过审核。" + tail, "selection", sel.getId());
+            }
         }
     }
 }

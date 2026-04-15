@@ -1,0 +1,97 @@
+package com.example.thesisconnectback.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.example.thesisconnectback.entity.SiteNotification;
+import com.example.thesisconnectback.mapper.SelectionMapper;
+import com.example.thesisconnectback.mapper.SiteNotificationMapper;
+import com.example.thesisconnectback.service.SiteNotificationService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.HashMap;
+import java.util.Map;
+
+@Service
+public class SiteNotificationServiceImpl extends ServiceImpl<SiteNotificationMapper, SiteNotification>
+        implements SiteNotificationService {
+
+    @Autowired
+    private SiteNotificationMapper siteNotificationMapper;
+
+    @Autowired
+    private SelectionMapper selectionMapper;
+
+    @Override
+    @Transactional
+    public void notifyUser(Long userId, String bizType, String title, String content, String relatedType, Long relatedId) {
+        if (userId == null) {
+            return;
+        }
+        SiteNotification n = new SiteNotification();
+        n.setUserId(userId);
+        n.setBizType(bizType);
+        n.setTitle(title);
+        n.setContent(content);
+        n.setReadFlag(0);
+        n.setRelatedType(relatedType);
+        n.setRelatedId(relatedId);
+        save(n);
+    }
+
+    @Override
+    public Page<SiteNotification> pageForUser(Long userId, int page, int size, String bizType, Boolean read) {
+        int p = Math.max(1, page);
+        int s = Math.min(100, Math.max(1, size));
+        Page<SiteNotification> pg = new Page<>(p, s);
+        QueryWrapper<SiteNotification> q = new QueryWrapper<>();
+        q.eq("user_id", userId);
+        if (bizType != null && !bizType.isBlank()) {
+            q.eq("biz_type", bizType.trim());
+        }
+        if (read != null) {
+            q.eq("read_flag", read ? 1 : 0);
+        }
+        q.orderByDesc("create_time");
+        return page(pg, q);
+    }
+
+    @Override
+    @Transactional
+    public boolean markRead(Long userId, Long id) {
+        SiteNotification n = getById(id);
+        if (n == null || !userId.equals(n.getUserId())) {
+            return false;
+        }
+        n.setReadFlag(1);
+        return updateById(n);
+    }
+
+    @Override
+    @Transactional
+    public int markAllRead(Long userId) {
+        return siteNotificationMapper.markAllRead(userId);
+    }
+
+    @Override
+    public long unreadCount(Long userId) {
+        return siteNotificationMapper.countUnreadByUserId(userId);
+    }
+
+    @Override
+    public Map<String, Long> pendingSummary(Long userId, String role) {
+        Map<String, Long> m = new HashMap<>();
+        if (userId == null || role == null) {
+            return m;
+        }
+        if ("teacher".equals(role)) {
+            m.put("pendingReviews", (long) selectionMapper.countPendingByTeacherId(userId));
+        } else if ("student".equals(role)) {
+            m.put("pendingConfirm", (long) selectionMapper.countApprovedAwaitingConfirmByStudentId(userId));
+        }
+        m.put("unreadNotifications", unreadCount(userId));
+        return m;
+    }
+}

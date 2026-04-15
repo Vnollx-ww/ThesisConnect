@@ -4,7 +4,15 @@
       <h2 class="page-title">选题列表</h2>
       <p class="page-desc">浏览所有可选的毕业论文题目，选择您感兴趣的课题</p>
     </div>
-    
+
+    <el-alert
+      v-if="selectionRules"
+      :title="rulesAlertTitle"
+      :type="rulesAlertType"
+      :closable="false"
+      show-icon
+      class="rules-alert" />
+
     <!-- 搜索和筛选 -->
     <div class="filter-section">
       <el-row :gutter="20">
@@ -159,7 +167,7 @@
 </template>
 
 <script>
-import { topicApi } from '@/api'
+import { topicApi, publicApi } from '@/api'
 import { getCurrentUserId } from '@/utils/user'
 
 export default {
@@ -177,16 +185,55 @@ export default {
       loading: false,
       
       // 真实数据
-      topics: []
+      topics: [],
+      selectionRules: null
     }
   },
   async mounted() {
+    await this.loadSelectionRules()
     await this.loadTopics()
   },
   computed: {
-    // 筛选逻辑已移到后端处理，不再需要前端computed筛选
+    rulesAlertType() {
+      if (!this.selectionRules) return 'info'
+      return this.selectionRules.selectionOpen === 'true' ? 'success' : 'warning'
+    },
+    rulesAlertTitle() {
+      const r = this.selectionRules
+      if (!r) return ''
+      const parts = []
+      if (r.selectionOpen === 'true') {
+        parts.push('当前处于选题开放时间内。')
+      } else {
+        parts.push('当前不在选题开放时间内，提交申请可能被系统拒绝。')
+      }
+      if (r.max_selections_per_student) {
+        parts.push(`每人最多有效申请 ${r.max_selections_per_student} 条。`)
+      }
+      if (r.allow_cross_major === 'false') {
+        parts.push('已限制：不可跨专业选题。')
+      }
+      if (r.max_selections_per_teacher_per_student) {
+        parts.push(`同一指导教师名下最多 ${r.max_selections_per_teacher_per_student} 条有效申请。`)
+      }
+      if (r.selection_start_time || r.selection_end_time) {
+        parts.push(`开放窗口：${r.selection_start_time || '—'} ～ ${r.selection_end_time || '—'}`)
+      }
+      return parts.join(' ')
+    }
   },
   methods: {
+    async loadSelectionRules() {
+      try {
+        const res = await publicApi.getSelectionRules()
+        if (res.code === 200 && res.data) {
+          this.selectionRules = res.data
+        }
+      } catch (e) {
+        console.warn('加载选题规则失败', e)
+      }
+    },
+
     // 加载课题列表
     async loadTopics() {
       try {
@@ -363,6 +410,10 @@ export default {
 .student-topics {
   max-width: 1200px;
   margin: 0 auto;
+}
+
+.rules-alert {
+  margin-bottom: 16px;
 }
 
 .page-header {

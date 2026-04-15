@@ -53,6 +53,11 @@ public interface SelectionService extends IService<Selection> {
     boolean reviewSelection(Long selectionId, String status, String comment);
 
     /**
+     * 批量审核（教师/管理员）；返回 successIds 与 failures（id + message）
+     */
+    Map<String, Object> batchReviewSelections(Long reviewerUserId, String reviewerRole, List<Long> selectionIds, String status, String comment);
+
+    /**
      * 更新选题状态
      */
     boolean updateSelectionStatus(Long selectionId, String status);

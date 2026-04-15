@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,6 +49,25 @@ public class SelectionServiceImpl extends ServiceImpl<SelectionMapper, Selection
         int max = systemConfigService.getMaxSelectionsPerStudent();
         if (selectionMapper.countNonRejectedByStudentId(studentId) >= max) {
             throw new BusinessException(400, "已达到最大选题申请数");
+        }
+        Topic topic = topicMapper.selectById(topicId);
+        if (topic == null) {
+            throw new BusinessException(400, "课题不存在");
+        }
+        User student = userMapper.selectById(studentId);
+        if (student == null) {
+            throw new BusinessException(400, "用户不存在");
+        }
+        if (!systemConfigService.isAllowCrossMajor()) {
+            String sm = student.getMajor() != null ? student.getMajor().trim() : "";
+            String tm = topic.getMajor() != null ? topic.getMajor().trim() : "";
+            if (sm.isEmpty() || tm.isEmpty() || !sm.equalsIgnoreCase(tm)) {
+                throw new BusinessException(400, "根据学院规定，不允许跨专业选题");
+            }
+        }
+        int maxPerTeacher = systemConfigService.getMaxSelectionsPerTeacherPerStudent();
+        if (selectionMapper.countNonRejectedByStudentAndTeacher(studentId, topic.getTeacherId()) >= maxPerTeacher) {
+            throw new BusinessException(400, "已达到该指导教师名下的最大选题申请数");
         }
     }
 
@@ -217,10 +237,62 @@ public class SelectionServiceImpl extends ServiceImpl<SelectionMapper, Selection
     public boolean isTopicFull(Long topicId) {
         Topic topic = topicMapper.selectById(topicId);
         if (topic != null) {
-            int approvedCount = selectionMapper.countApprovedByTopicId(topicId);
-            return approvedCount >= topic.getMaxStudents();
+            int pipeline = selectionMapper.countPipelineByTopicId(topicId);
+            return pipeline >= topic.getMaxStudents();
         }
         return true;
+    }
+
+    @Override
+    public Map<String, Object> batchReviewSelections(Long reviewerUserId, String reviewerRole, List<Long> selectionIds, String status, String comment) {
+        List<Long> successIds = new ArrayList<>();
+        List<Map<String, Object>> failures = new ArrayList<>();
+        Map<String, Object> out = new HashMap<>();
+        out.put("successIds", successIds);
+        out.put("failures", failures);
+        if (selectionIds == null || selectionIds.isEmpty()) {
+            return out;
+        }
+        for (Long id : selectionIds) {
+            if (id == null) {
+                continue;
+            }
+            Selection sel = getById(id);
+            if (sel == null) {
+                failures.add(batchFailure(id, "选题记录不存在"));
+                continue;
+            }
+            if (!"teacher".equals(reviewerRole) && !"admin".equals(reviewerRole)) {
+                failures.add(batchFailure(id, "权限不足"));
+                continue;
+            }
+            if ("teacher".equals(reviewerRole) && (reviewerUserId == null || !reviewerUserId.equals(sel.getTeacherId()))) {
+                failures.add(batchFailure(id, "只能审核本人课题的申请"));
+                continue;
+            }
+            if (!"pending".equals(sel.getStatus())) {
+                failures.add(batchFailure(id, "仅待审核记录可审核"));
+                continue;
+            }
+            if (status == null || (!"approved".equals(status) && !"rejected".equals(status))) {
+                failures.add(batchFailure(id, "审核状态无效"));
+                continue;
+            }
+            boolean ok = reviewSelection(id, status, comment);
+            if (ok) {
+                successIds.add(id);
+            } else {
+                failures.add(batchFailure(id, "审核失败"));
+            }
+        }
+        return out;
+    }
+
+    private static Map<String, Object> batchFailure(Long id, String message) {
+        Map<String, Object> m = new HashMap<>();
+        m.put("id", id);
+        m.put("message", message);
+        return m;
     }
 
     @Override

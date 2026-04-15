@@ -20,8 +20,11 @@ public class SystemConfigServiceImpl extends ServiceImpl<SystemConfigMapper, Sys
     public static final String KEY_SELECTION_START = "selection_start_time";
     public static final String KEY_SELECTION_END = "selection_end_time";
     public static final String KEY_MAX_SELECTIONS = "max_selections_per_student";
+    public static final String KEY_ALLOW_CROSS_MAJOR = "allow_cross_major";
+    public static final String KEY_MAX_PER_TEACHER = "max_selections_per_teacher_per_student";
 
     private static final String DEFAULT_MAX = "3";
+    private static final String DEFAULT_MAX_PER_TEACHER = "99";
 
     @Override
     public Map<String, String> getAllConfig() {
@@ -86,12 +89,39 @@ public class SystemConfigServiceImpl extends ServiceImpl<SystemConfigMapper, Sys
     }
 
     @Override
+    public boolean isAllowCrossMajor() {
+        Map<String, String> m = getAllConfig();
+        String v = m.get(KEY_ALLOW_CROSS_MAJOR);
+        if (v == null || v.isBlank()) {
+            return true;
+        }
+        return !"false".equalsIgnoreCase(v.trim());
+    }
+
+    @Override
+    public int getMaxSelectionsPerTeacherPerStudent() {
+        Map<String, String> m = getAllConfig();
+        String v = m.get(KEY_MAX_PER_TEACHER);
+        if (v == null || v.isBlank()) {
+            return Integer.parseInt(DEFAULT_MAX_PER_TEACHER);
+        }
+        try {
+            int n = Integer.parseInt(v.trim());
+            return Math.max(1, Math.min(n, 99));
+        } catch (NumberFormatException e) {
+            return Integer.parseInt(DEFAULT_MAX_PER_TEACHER);
+        }
+    }
+
+    @Override
     public Map<String, String> getPublicSelectionRules() {
         Map<String, String> m = getAllConfig();
         Map<String, String> out = new HashMap<>();
         out.put(KEY_SELECTION_START, m.getOrDefault(KEY_SELECTION_START, ""));
         out.put(KEY_SELECTION_END, m.getOrDefault(KEY_SELECTION_END, ""));
         out.put(KEY_MAX_SELECTIONS, String.valueOf(getMaxSelectionsPerStudent()));
+        out.put(KEY_ALLOW_CROSS_MAJOR, String.valueOf(isAllowCrossMajor()));
+        out.put(KEY_MAX_PER_TEACHER, String.valueOf(getMaxSelectionsPerTeacherPerStudent()));
         out.put("selectionOpen", String.valueOf(isWithinSelectionPeriod()));
         return out;
     }
