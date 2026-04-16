@@ -15,7 +15,7 @@ spring:
           driver-class-name: com.mysql.cj.jdbc.Driver
           url: jdbc:mysql://localhost:3306/thesis_connect?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
           username: root
-          password: ab147890
+          password: 123456
           druid:
             initial-size: 5
             min-idle: 5
@@ -60,7 +60,7 @@ spring:
     host: smtp.qq.com
     port: 465
     username: 2720741614@qq.com
-    password: ${MAIL_PASSWORD:}
+    password: jfccwlsdynqfdchg
     default-encoding: UTF-8
     properties:
       mail:

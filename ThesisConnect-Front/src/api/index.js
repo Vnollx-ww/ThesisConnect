@@ -192,6 +192,21 @@ export const selectionApi = {
   // 批量审核 { selectionIds, status, comment }
   batchReview(body) {
     return request.post('/api/selections/batch-review', body)
+  },
+
+  /** 推进/回退预定进度链 { action: 'next' | 'prev' | 'set', setCount?: number } */
+  adjustProgressChainStep(selectionId, body) {
+    return request.put(`/api/selections/${selectionId}/progress-chain-step`, body)
+  },
+
+  /** 学生提交当前阶段材料 { description, reportUrl } */
+  submitProgressNodeSubmission(selectionId, body) {
+    return request.post(`/api/selections/${selectionId}/progress-node-submission`, body)
+  },
+
+  /** 教师/管理员审核阶段材料 { status: 'approved' | 'rejected', rejectReason? } */
+  reviewProgressNodeSubmission(selectionId, submissionId, body) {
+    return request.post(`/api/selections/${selectionId}/progress-node-submissions/${submissionId}/review`, body)
   }
 }
 
@@ -325,6 +340,42 @@ export const progressApi = {
   // 获取进度统计
   getProgressStats() {
     return request.get('/api/progress/stats')
+  },
+
+  /** 预定进度链路展示（节点状态） */
+  getChainView(selectionId) {
+    return request.get(`/api/progress/chain-view/${selectionId}`)
+  }
+}
+
+// 管理员 — 进度链路
+export const progressChainApi = {
+  list() {
+    return request.get('/api/admin/progress-chains')
+  },
+  create(data) {
+    return request.post('/api/admin/progress-chains', data)
+  },
+  update(id, data) {
+    return request.put(`/api/admin/progress-chains/${id}`, data)
+  },
+  remove(id) {
+    return request.delete(`/api/admin/progress-chains/${id}`)
+  },
+  setDefault(id) {
+    return request.put(`/api/admin/progress-chains/${id}/default`)
+  },
+  listNodes(chainId) {
+    return request.get(`/api/admin/progress-chains/${chainId}/nodes`)
+  },
+  addNode(chainId, data) {
+    return request.post(`/api/admin/progress-chains/${chainId}/nodes`, data)
+  },
+  updateNode(nodeId, data) {
+    return request.put(`/api/admin/progress-chains/nodes/${nodeId}`, data)
+  },
+  deleteNode(nodeId) {
+    return request.delete(`/api/admin/progress-chains/nodes/${nodeId}`)
   }
 }
 

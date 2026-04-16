@@ -9,6 +9,8 @@ import com.example.thesisconnectback.mapper.SelectionMapper;
 import com.example.thesisconnectback.mapper.TopicMapper;
 import com.example.thesisconnectback.mapper.UserMapper;
 import com.example.thesisconnectback.exception.BusinessException;
+import com.example.thesisconnectback.service.ProgressChainService;
+import com.example.thesisconnectback.service.SelectionNodeSubmissionService;
 import com.example.thesisconnectback.service.SelectionService;
 import com.example.thesisconnectback.service.SystemConfigService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +43,12 @@ public class SelectionServiceImpl extends ServiceImpl<SelectionMapper, Selection
 
     @Autowired
     private SystemConfigService systemConfigService;
+
+    @Autowired
+    private ProgressChainService progressChainService;
+
+    @Autowired
+    private SelectionNodeSubmissionService selectionNodeSubmissionService;
 
     @Override
     public void validateSelectTopicRequest(Long studentId, Long topicId) {
@@ -188,15 +197,20 @@ public class SelectionServiceImpl extends ServiceImpl<SelectionMapper, Selection
             selection.setStatus(status);
             selection.setUpdateTime(LocalDateTime.now());
             boolean updated = updateById(selection);
-            
-            // 如果状态变为confirmed，更新课题的已选人数
+
             if (updated && "confirmed".equals(status)) {
                 Long topicId = selection.getTopicId();
-                // 统计该课题所有已确认的选题数量
                 int confirmedCount = selectionMapper.countConfirmedByTopicId(topicId);
                 topicMapper.updateSelectedCount(topicId, confirmedCount);
             }
-            
+
+            if (updated && ("confirmed".equals(status) || "active".equals(status))) {
+                Selection fresh = getById(selectionId);
+                if (fresh != null && fresh.getProgressChainId() == null) {
+                    progressChainService.attachDefaultChainToSelection(fresh);
+                }
+            }
+
             return updated;
         }
         return false;
@@ -426,5 +440,83 @@ public class SelectionServiceImpl extends ServiceImpl<SelectionMapper, Selection
             map.put("create_time", selection.getCreateTime());
             return map;
         }).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public boolean adjustProgressChainStep(Long selectionId, String action, Integer setCount, Long operatorUserId, String operatorRole) {
+        Selection selection = getById(selectionId);
+        if (selection == null || selection.getProgressChainId() == null) {
+            return false;
+        }
+        if (!"admin".equals(operatorRole)) {
+            if ("teacher".equals(operatorRole)) {
+                if (operatorUserId == null || !operatorUserId.equals(selection.getTeacherId())) {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        }
+        if (!"confirmed".equals(selection.getStatus()) && !"active".equals(selection.getStatus())) {
+            return false;
+        }
+
+        int n = progressChainService.countNodes(selection.getProgressChainId());
+        int c = selection.getProgressCompletedCount() != null ? selection.getProgressCompletedCount() : 0;
+
+        if ("next".equals(action) && "teacher".equals(operatorRole)) {
+            if (c < n && !selectionNodeSubmissionService.isLatestApprovedForNode(selectionId, c)) {
+                throw new BusinessException(400, "请先在「课题进度」中审核通过学生本阶段提交的材料后，再点击「完成本阶段」推进");
+            }
+        }
+
+        if ("next".equals(action)) {
+            c = Math.min(n, c + 1);
+        } else if ("prev".equals(action)) {
+            c = Math.max(0, c - 1);
+        } else if ("set".equals(action) && setCount != null) {
+            c = Math.max(0, Math.min(n, setCount));
+        } else {
+            return false;
+        }
+
+        selection.setProgressCompletedCount(c);
+        selection.setProgress(computeChainProgressPercent(c, n));
+        selection.setUpdateTime(LocalDateTime.now());
+        return updateById(selection);
+    }
+
+    private static int computeChainProgressPercent(int completedCount, int totalNodes) {
+        if (totalNodes <= 0) {
+            return 0;
+        }
+        int c = Math.max(0, Math.min(completedCount, totalNodes));
+        if (c >= totalNodes) {
+            return 100;
+        }
+        return (int) (c * 100L / totalNodes);
+    }
+
+    @Override
+    public Map<String, Object> getProgressChainView(Long selectionId, Long requestUserId, String role) {
+        Selection selection = getById(selectionId);
+        if (selection == null) {
+            Map<String, Object> m = new HashMap<>();
+            m.put("_notFound", Boolean.TRUE);
+            return m;
+        }
+        if ("student".equals(role)) {
+            if (requestUserId == null || !requestUserId.equals(selection.getStudentId())) {
+                return null;
+            }
+        } else if ("teacher".equals(role)) {
+            if (requestUserId == null || !requestUserId.equals(selection.getTeacherId())) {
+                return null;
+            }
+        } else if (!"admin".equals(role)) {
+            return null;
+        }
+        return progressChainService.buildChainView(selection);
     }
 }

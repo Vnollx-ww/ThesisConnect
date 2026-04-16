@@ -96,4 +96,14 @@ public interface SelectionService extends IService<Selection> {
      * Get recent selections
      */
     List<Map<String, Object>> getRecentSelections(int limit);
+
+    /**
+     * 教师/管理员调整选题在预定进度链上的完成节点数。action: next | prev | set
+     */
+    boolean adjustProgressChainStep(Long selectionId, String action, Integer setCount, Long operatorUserId, String operatorRole);
+
+    /**
+     * 学生/教师/管理员查看预定进度链路展示（含节点状态）
+     */
+    Map<String, Object> getProgressChainView(Long selectionId, Long requestUserId, String role);
 }

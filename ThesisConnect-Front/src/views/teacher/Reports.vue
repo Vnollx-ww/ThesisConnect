@@ -549,15 +549,15 @@ export default {
     
     exportReport() {
       const exportData = [
-        { 'Metric': 'Total Topics', 'Value': this.metrics.totalTopics },
-        { 'Metric': 'Total Students', 'Value': this.metrics.totalStudents },
-        { 'Metric': 'Pending Reviews', 'Value': this.metrics.pendingReviews },
-        { 'Metric': 'Active Selections', 'Value': this.metrics.activeSelections },
-        { 'Metric': 'Completed', 'Value': this.metrics.completedSelections },
-        { 'Metric': 'Average Progress', 'Value': this.metrics.avgProgress ? this.metrics.avgProgress + '%' : 'N/A' }
+        { '指标': '发布课题数', '数值': this.metrics.totalTopics },
+        { '指标': '指导学生数', '数值': this.metrics.totalStudents },
+        { '指标': '待审核数', '数值': this.metrics.pendingReviews },
+        { '指标': '进行中选题', '数值': this.metrics.activeSelections },
+        { '指标': '已完成', '数值': this.metrics.completedSelections },
+        { '指标': '平均进度', '数值': this.metrics.avgProgress != null ? this.metrics.avgProgress + '%' : '—' }
       ]
-      const fileName = `Teacher_Report_${new Date().toISOString().slice(0, 10)}.xlsx`
-      exportToExcel(exportData, 'Report', fileName)
+      const fileName = `教师统计报表_${new Date().toISOString().slice(0, 10)}.xlsx`
+      exportToExcel(exportData, '统计报表', fileName)
       this.$message.success('导出成功')
     },
     
@@ -567,16 +567,16 @@ export default {
         return
       }
       const exportData = this.topicStats.map(topic => ({
-        'Topic': topic.title,
-        'Selected': topic.selectedCount,
-        'Max': topic.maxStudents,
-        'Pending': topic.pendingCount,
-        'Active': topic.activeCount,
-        'Completed': topic.completedCount,
-        'Avg Progress': topic.avgProgress !== undefined ? topic.avgProgress + '%' : 'N/A'
+        '课题名称': topic.title,
+        '已选人数': topic.selectedCount,
+        '最大人数': topic.maxStudents,
+        '待处理': topic.pendingCount,
+        '进行中': topic.activeCount,
+        '已完成': topic.completedCount,
+        '平均进度': topic.avgProgress !== undefined ? topic.avgProgress + '%' : '—'
       }))
-      const fileName = `Detailed_Data_${new Date().toISOString().slice(0, 10)}.xlsx`
-      exportToExcel(exportData, 'Detailed Data', fileName)
+      const fileName = `课题详细统计_${new Date().toISOString().slice(0, 10)}.xlsx`
+      exportToExcel(exportData, '详细统计', fileName)
       this.$message.success('导出成功')
     },
     

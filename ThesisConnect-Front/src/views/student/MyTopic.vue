@@ -230,12 +230,8 @@
       </div>
 
       <div class="section-header">
-        <h3>进度管理</h3>
-        <el-tooltip :content="progressTooltip" placement="top" :disabled="!isUpdateDisabled">
-          <span style="display: inline-block;">
-            <el-button type="primary" size="small" @click="editProgress()" :disabled="isUpdateDisabled">更新进度</el-button>
-          </span>
-        </el-tooltip>
+        <h3>进度</h3>
+        <p class="progress-hint">各阶段需先提交材料并由指导教师审核通过后，教师才会推进到下一阶段；您可在下方提交当前阶段说明或材料链接。</p>
       </div>
       
       <div class="progress-card">
@@ -246,58 +242,71 @@
             :stroke-width="8">
           </el-progress>
           <p class="progress-text">整体进度：{{ getProgress() }}%</p>
+          <p v-if="chainView && chainView.chainName" class="chain-name">当前链路：{{ chainView.chainName }}</p>
+        </div>
+
+        <div
+          v-if="showNodeMaterialPanel"
+          class="node-material-panel">
+          <h4 class="node-material-title">当前阶段材料</h4>
+          <p class="node-material-desc">请根据当前节点要求填写说明，或填写已上传至「文档管理」的文件链接（也可粘贴网盘等地址）。</p>
+          <template v-if="!chainView.currentNodeSubmission">
+            <el-form label-width="88px" class="node-material-form">
+              <el-form-item label="阶段说明">
+                <el-input v-model="nodeMaterialForm.description" type="textarea" :rows="3" maxlength="2000" show-word-limit placeholder="本阶段完成情况、摘要等" />
+              </el-form-item>
+              <el-form-item label="材料链接">
+                <el-input v-model="nodeMaterialForm.reportUrl" maxlength="500" show-word-limit placeholder="可选；与说明至少填一项" />
+              </el-form-item>
+              <el-form-item>
+                <el-button type="primary" :loading="nodeSubmitLoading" @click="submitNodeMaterial">提交审核</el-button>
+              </el-form-item>
+            </el-form>
+          </template>
+          <template v-else-if="chainView.currentNodeSubmission.status === 'pending'">
+            <el-alert type="info" show-icon :closable="false" title="已提交，等待指导教师审核" />
+            <p v-if="chainView.currentNodeSubmission.description" class="muted-line">说明：{{ chainView.currentNodeSubmission.description }}</p>
+            <p v-if="chainView.currentNodeSubmission.reportUrl" class="muted-line">链接：<a :href="chainView.currentNodeSubmission.reportUrl" target="_blank" rel="noopener">{{ chainView.currentNodeSubmission.reportUrl }}</a></p>
+          </template>
+          <template v-else-if="chainView.currentNodeSubmission.status === 'rejected'">
+            <el-alert type="error" show-icon :closable="false" :title="'需修改：' + (chainView.currentNodeSubmission.rejectReason || '请根据教师意见修改后重新提交')" />
+            <el-form label-width="88px" class="node-material-form" style="margin-top:12px">
+              <el-form-item label="阶段说明">
+                <el-input v-model="nodeMaterialForm.description" type="textarea" :rows="3" maxlength="2000" show-word-limit />
+              </el-form-item>
+              <el-form-item label="材料链接">
+                <el-input v-model="nodeMaterialForm.reportUrl" maxlength="500" show-word-limit />
+              </el-form-item>
+              <el-form-item>
+                <el-button type="primary" :loading="nodeSubmitLoading" @click="submitNodeMaterial">重新提交</el-button>
+              </el-form-item>
+            </el-form>
+          </template>
+          <template v-else-if="chainView.currentNodeSubmission.status === 'approved'">
+            <el-alert type="success" show-icon :closable="false" title="本阶段材料已通过，请等待指导教师在系统中推进到下一阶段" />
+          </template>
         </div>
         
-        <div class="progress-timeline">
+        <div v-if="!chainView || !chainView.nodes || chainView.nodes.length === 0" class="no-chain">
+          <p v-if="myTopic && ['confirmed','active','completed'].includes(myTopic.status)">暂无进度链路，请联系管理员配置默认进度链路。</p>
+          <p v-else>选题确认后将显示由学校统一配置的进度节点。</p>
+        </div>
+        <div v-else class="progress-timeline">
           <el-timeline>
             <el-timeline-item
-              v-for="(milestone, index) in milestones"
-              :key="index"
-              :timestamp="formatDateTime(milestone.date)"
-              :type="milestone.status === 'completed' ? 'success' : milestone.status === 'current' ? 'primary' : 'info'">
+              v-for="(node, index) in chainView.nodes"
+              :key="node.id || index"
+              :type="node.state === 'completed' ? 'success' : node.state === 'current' ? 'primary' : 'info'">
               <div class="milestone-content">
                 <div class="milestone-header">
-                  <h4 style="display: flex; align-items: center;">
-                    {{ milestone.title }}
-                    <el-tag size="mini" type="info" style="margin-left: 10px; font-weight: normal;">进度: {{ milestone.percentage }}%</el-tag>
-                  </h4>
-                  <div class="milestone-actions">
-                    <el-select 
-                      v-model="milestone.status" 
-                      size="mini" 
-                      @change="updateMilestoneStatus(milestone)"
-                      style="width: 80px;">
-                      <el-option label="待开始" value="pending"></el-option>
-                      <el-option label="进行中" value="current"></el-option>
-                      <el-option label="已完成" value="completed"></el-option>
-                    </el-select>
-                  </div>
+                  <h4>{{ node.title }}</h4>
                 </div>
-                <p>{{ milestone.description }}</p>
-                <div class="milestone-footer">
-                  <el-tag 
-                    :type="milestone.status === 'completed' ? 'success' : milestone.status === 'current' ? 'primary' : 'info'"
-                    size="small">
-                    {{ getStatusText(milestone.status) }}
-                  </el-tag>
-                  <div style="margin-top: 5px;">
-                    <el-tag 
-                      size="mini" 
-                      effect="dark"
-                      :type="milestone.auditStatus === 'approved' ? 'success' : milestone.auditStatus === 'rejected' ? 'danger' : 'warning'">
-                      {{ milestone.auditStatus === 'approved' ? '审核通过' : milestone.auditStatus === 'rejected' ? '审核未通过' : '待审核' }}
-                    </el-tag>
-                    <span v-if="milestone.reportUrl" style="margin-left: 10px;">
-                      <a :href="milestone.reportUrl" target="_blank" style="color: #409EFF; text-decoration: none;">
-                        <i class="el-icon-document"></i> 查看报告
-                      </a>
-                    </span>
-                  </div>
-                  <div v-if="milestone.auditStatus === 'rejected'" style="margin-top: 5px; color: #F56C6C; font-size: 12px;">
-                    <div>原因: {{ milestone.rejectReason }}</div>
-                    <el-button type="text" size="mini" @click="editProgress(milestone)" v-if="myTopic.status !== 'completed'">修改并重新提交</el-button>
-                  </div>
-                </div>
+                <p v-if="node.description">{{ node.description }}</p>
+                <el-tag
+                  size="small"
+                  :type="node.state === 'completed' ? 'success' : node.state === 'current' ? 'primary' : 'info'">
+                  {{ nodeStateText(node.state) }}
+                </el-tag>
               </div>
             </el-timeline-item>
           </el-timeline>
@@ -393,61 +402,6 @@
       </span>
     </el-dialog>
 
-    <!-- 进度更新对话框 -->
-    <el-dialog
-      title="更新进度"
-      :visible.sync="progressDialogVisible"
-      width="500px">
-      <el-form :model="progressForm" label-width="100px">
-        <el-form-item label="里程碑标题">
-          <el-input
-            v-model="progressForm.milestoneTitle"
-            placeholder="请输入里程碑标题，如：需求分析、系统设计、编码实现等">
-          </el-input>
-        </el-form-item>
-        <el-form-item label="里程碑状态">
-          <el-select v-model="progressForm.milestoneStatus" placeholder="请选择状态">
-            <el-option label="进行中" value="current"></el-option>
-            <el-option label="已完成" value="completed"></el-option>
-            <el-option label="待开始" value="pending"></el-option>
-          </el-select>
-        </el-form-item>
-        <el-form-item label="当前进度">
-          <el-slider v-model="progressForm.percentage" :min="0" :max="100"></el-slider>
-        </el-form-item>
-        <el-form-item label="报告文档">
-          <el-upload
-            action="#"
-            :http-request="handleUpload"
-            :file-list="fileList"
-            :limit="1"
-            :on-remove="handleRemove">
-            <el-button size="small" type="primary">点击上传</el-button>
-            <div slot="tip" class="el-upload__tip">只能上传docx/pdf文件，每个进度需单独上传</div>
-          </el-upload>
-        </el-form-item>
-        <el-form-item label="进度说明">
-          <el-input
-            v-model="progressForm.description"
-            type="textarea"
-            :rows="3"
-            placeholder="请描述当前完成的工作内容">
-          </el-input>
-        </el-form-item>
-        <el-form-item label="遇到的问题">
-          <el-input
-            v-model="progressForm.problems"
-            type="textarea"
-            :rows="2"
-            placeholder="请描述遇到的问题（可选）">
-          </el-input>
-        </el-form-item>
-      </el-form>
-      <span slot="footer" class="dialog-footer">
-        <el-button @click="progressDialogVisible = false">取消</el-button>
-        <el-button type="primary" @click="submitProgress">提交</el-button>
-      </span>
-    </el-dialog>
     <!-- 文档上传对话框 -->
     <el-dialog
       title="上传文档"
@@ -475,7 +429,7 @@
 </template>
 
 <script>
-import { selectionApi, progressApi, documentApi, topicApi, fileApi } from '@/api'
+import { selectionApi, progressApi, documentApi, topicApi } from '@/api'
 import { getCurrentUserId } from '@/utils/user'
 
 export default {
@@ -483,48 +437,29 @@ export default {
   data() {
     return {
       loading: false,
-      progressDialogVisible: false,
       uploadDialogVisible: false,
       uploadLoading: false,
       uploadFile: null,
       uploadFileList: [],
-      progressForm: {
-        milestoneTitle: '',
-        milestoneStatus: 'current',
-        percentage: 0,
-        description: '',
-        problems: '',
-        reportUrl: ''
-      },
-      fileList: [],
       documentDialogVisible: false,
       documentFileList: [],
       
       // 真实数据
       myTopic: null,
-      milestones: [],
+      chainView: null,
       documents: [],
-      applications: [] // 我的申请列表
+      applications: [], // 我的申请列表
+      nodeMaterialForm: { description: '', reportUrl: '' },
+      nodeSubmitLoading: false
     }
   },
   computed: {
-    // 检查是否有待审核的进度
-    hasPendingReview() {
-      if (!this.milestones || this.milestones.length === 0) return false;
-      // 只要有一个状态是pending，就认为有待审核的
-      return this.milestones.some(m => m.auditStatus === 'pending');
-    },
-    isUpdateDisabled() {
-      return this.hasPendingReview || (this.myTopic && this.myTopic.status === 'completed');
-    },
-    progressTooltip() {
-      if (this.myTopic && this.myTopic.status === 'completed') {
-        return '课题已结题，不能更新进度';
-      }
-      if (this.hasPendingReview) {
-        return '当前有待审核的进度，请等待审核完成后再提交';
-      }
-      return '';
+    showNodeMaterialPanel() {
+      if (!this.myTopic || !this.chainView || !this.chainView.nodes || !this.chainView.nodes.length) return false
+      if (!['confirmed', 'active'].includes(this.myTopic.status)) return false
+      const total = this.chainView.totalNodes != null ? this.chainView.totalNodes : this.chainView.nodes.length
+      const done = this.chainView.completedCount != null ? this.chainView.completedCount : 0
+      return done < total
     }
   },
   async mounted() {
@@ -584,8 +519,7 @@ export default {
                   teacherName: selection.teacherName || topicResponse.data.teacherName
                 }
                 
-                // 获取进度信息
-                await this.loadProgressData()
+                await this.loadChainView()
                 
                 // 获取文档信息
                 await this.loadDocumentsData()
@@ -600,12 +534,12 @@ export default {
             }
           } else {
             this.myTopic = null
-            this.milestones = []
+            this.chainView = null
             this.documents = []
           }
         } else {
           this.myTopic = null
-          this.milestones = []
+          this.chainView = null
           this.documents = []
           this.applications = []
         }
@@ -624,69 +558,58 @@ export default {
       }
     },
     
-    // 加载进度数据
-    async loadProgressData() {
+    async loadChainView() {
+      this.chainView = null
       if (!this.myTopic || !this.myTopic.selectionId) return
-      
       try {
-        const response = await progressApi.getProgressBySelection(this.myTopic.selectionId)
-        if (response.code === 200) {
-          // 处理进度数据，过滤出里程碑记录
-          const progressData = response.data || []
-          this.milestones = progressData
-            .map(item => ({
-              id: item.id,
-              title: item.milestoneTitle || '进度更新', // 为没有标题的记录提供默认标题
-              description: item.milestoneDescription || item.description || '',
-              problems: item.problems,
-              status: item.milestoneStatus || 'pending',
-              auditStatus: item.status || 'pending',
-              rejectReason: item.rejectReason,
-              reportUrl: item.reportUrl,
-              date: item.milestoneDate || item.createTime,
-              percentage: item.percentage
-            }))
-            .sort((a, b) => new Date(a.date) - new Date(b.date)) // 按时间排序
+        const response = await progressApi.getChainView(this.myTopic.selectionId)
+        if (response.code === 200 && response.data) {
+          this.chainView = response.data
+          if (response.data.progressPercent != null && this.myTopic) {
+            this.myTopic.progress = response.data.progressPercent
+          }
+          const sub = response.data.currentNodeSubmission
+          if (sub && sub.status === 'rejected') {
+            this.nodeMaterialForm = {
+              description: sub.description || '',
+              reportUrl: sub.reportUrl || ''
+            }
+          } else {
+            this.nodeMaterialForm = { description: '', reportUrl: '' }
+          }
         }
       } catch (error) {
-        console.error('加载进度数据失败:', error)
+        console.error('加载进度链路失败:', error)
       }
     },
 
-    // 文件上传处理
-    async handleUpload(options) {
+    async submitNodeMaterial() {
+      if (!this.myTopic || !this.myTopic.selectionId) return
+      const d = (this.nodeMaterialForm.description || '').trim()
+      const u = (this.nodeMaterialForm.reportUrl || '').trim()
+      if (!d && !u) {
+        this.$message.warning('请填写阶段说明或材料链接')
+        return
+      }
+      this.nodeSubmitLoading = true
       try {
-        const { file } = options
-        // 检查文件类型
-        const isDoc = file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || 
-                      file.type === 'application/pdf' || 
-                      file.name.endsWith('.docx') || 
-                      file.name.endsWith('.pdf')
-        
-        if (!isDoc) {
-          this.$message.error('只能上传 docx 或 pdf 格式的文件!')
-          return
-        }
-
-        const response = await fileApi.uploadFile(file)
-        if (response.code === 200) {
-          this.progressForm.reportUrl = response.data
-          this.$message.success('文件上传成功')
+        const res = await selectionApi.submitProgressNodeSubmission(this.myTopic.selectionId, {
+          description: d || undefined,
+          reportUrl: u || undefined
+        })
+        if (res.code === 200) {
+          this.$message.success('已提交')
+          await this.loadChainView()
         } else {
-          this.$message.error('文件上传失败')
-          this.fileList = []
+          this.$message.error(res.message || '提交失败')
         }
-      } catch (error) {
-        console.error('文件上传出错:', error)
-        this.$message.error('文件上传出错')
-        this.fileList = []
+      } catch (e) {
+        this.$message.error((e && e.message) || '提交失败')
+      } finally {
+        this.nodeSubmitLoading = false
       }
     },
 
-    handleRemove() {
-      this.progressForm.reportUrl = ''
-      this.fileList = []
-    },
     
     // 加载文档数据
     async loadDocumentsData() {
@@ -712,7 +635,15 @@ export default {
     },
     
     getProgress() {
-      return this.myTopic ? this.myTopic.progress : 0;
+      if (this.chainView && this.chainView.progressPercent != null) {
+        return this.chainView.progressPercent
+      }
+      return this.myTopic ? (this.myTopic.progress || 0) : 0
+    },
+
+    nodeStateText(state) {
+      const m = { completed: '已完成', current: '进行中', pending: '待开始' }
+      return m[state] || state || '—'
     },
     
     getGrade() {
@@ -750,41 +681,6 @@ export default {
       return '#909399';
     },
     
-    getStatusText(status) {
-      const statusMap = {
-        'completed': '已完成',
-        'current': '进行中',
-        'pending': '待开始'
-      };
-      return statusMap[status] || '未知';
-    },
-    
-    // 更新里程碑状态
-    async updateMilestoneStatus(milestone) {
-      try {
-        const updateData = {
-          id: milestone.id,
-          milestoneStatus: milestone.status
-        }
-        
-        const response = await progressApi.updateMilestoneStatus(updateData)
-        if (response.code === 200) {
-          this.$message.success('里程碑状态更新成功！')
-          // 重新加载进度数据
-          await this.loadProgressData()
-        } else {
-          this.$message.error(response.message || '状态更新失败')
-          // 恢复原状态
-          await this.loadProgressData()
-        }
-      } catch (error) {
-        console.error('更新里程碑状态失败:', error)
-        this.$message.error('状态更新失败，请稍后重试')
-        // 恢复原状态
-        await this.loadProgressData()
-      }
-    },
-    
     // 格式化日期显示（只显示日期，不显示时间）
     formatDate(dateStr) {
       if (!dateStr) return '-'
@@ -806,56 +702,6 @@ export default {
         'rejected': '已拒绝'
       };
       return statusMap[status] || '未知';
-    },
-    
-    editProgress(milestone) {
-      if (milestone && milestone.id) {
-        this.progressForm.milestoneTitle = milestone.title;
-        this.progressForm.milestoneStatus = milestone.status;
-        this.progressForm.percentage = milestone.percentage;
-        this.progressForm.description = milestone.description;
-        this.progressForm.problems = milestone.problems;
-        this.progressForm.reportUrl = ''; // 重置文件，要求重新上传
-        this.fileList = [];
-      } else {
-        this.progressForm.percentage = this.myTopic.progress;
-        this.progressForm.description = '';
-        this.progressForm.problems = '';
-        this.progressForm.reportUrl = '';
-        this.fileList = [];
-      }
-      this.progressDialogVisible = true;
-    },
-    
-    async submitProgress() {
-      try {
-        const progressData = {
-          selectionId: this.myTopic.selectionId,
-          milestoneTitle: this.progressForm.milestoneTitle,
-          milestoneStatus: this.progressForm.milestoneStatus,
-          percentage: this.progressForm.percentage,
-          description: this.progressForm.description,
-          problems: this.progressForm.problems,
-          reportUrl: this.progressForm.reportUrl
-        }
-        
-        const response = await progressApi.updateProgress(progressData)
-        if (response.code === 200) {
-          // 更新本地数据
-          this.myTopic.progress = this.progressForm.percentage
-          this.progressDialogVisible = false
-          this.$message.success('进度更新成功！')
-          
-          // 重新加载选题数据和进度数据
-          await this.loadMyTopicData()
-          await this.loadProgressData()
-        } else {
-          this.$message.error(response.message || '进度更新失败')
-        }
-      } catch (error) {
-        console.error('更新进度失败:', error)
-        this.$message.error('进度更新失败，请稍后重试')
-      }
     },
     
     uploadDocument() {
@@ -1205,6 +1051,62 @@ export default {
 .progress-section,
 .documents-section {
   margin-bottom: 30px;
+}
+
+.progress-section .section-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.node-material-panel {
+  margin-top: 20px;
+  padding: 16px 18px;
+  background: #f8fafc;
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+}
+.node-material-title {
+  margin: 0 0 8px;
+  font-size: 16px;
+  color: #303133;
+}
+.node-material-desc {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: #909399;
+  line-height: 1.5;
+}
+.node-material-form {
+  max-width: 640px;
+}
+.muted-line {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: #606266;
+  word-break: break-all;
+}
+
+.progress-hint {
+  margin: 0;
+  font-size: 13px;
+  color: #909399;
+  flex: 1;
+  min-width: 200px;
+}
+
+.chain-name {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #606266;
+}
+
+.no-chain {
+  padding: 20px;
+  text-align: center;
+  color: #909399;
+  font-size: 14px;
 }
 
 .applications-list {

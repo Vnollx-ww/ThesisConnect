@@ -131,17 +131,17 @@ public class TopicServiceImpl extends ServiceImpl<TopicMapper, Topic> implements
         List<Map<String, Object>> pieData = new ArrayList<>();
         
         Map<String, Object> easyData = new HashMap<>();
-        easyData.put("name", "Easy");
+        easyData.put("name", "简单");
         easyData.put("value", easyTopics.size());
         pieData.add(easyData);
         
         Map<String, Object> mediumData = new HashMap<>();
-        mediumData.put("name", "Medium");
+        mediumData.put("name", "中等");
         mediumData.put("value", mediumTopics.size());
         pieData.add(mediumData);
         
         Map<String, Object> hardData = new HashMap<>();
-        hardData.put("name", "Hard");
+        hardData.put("name", "困难");
         hardData.put("value", hardTopics.size());
         pieData.add(hardData);
         

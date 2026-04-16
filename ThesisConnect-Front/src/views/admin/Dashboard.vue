@@ -467,17 +467,17 @@ export default {
     
     exportSystemData() {
       const exportData = [
-        { 'Metric': 'Total Users', 'Value': this.metrics.totalUsers },
-        { 'Metric': 'Total Topics', 'Value': this.metrics.totalTopics },
-        { 'Metric': 'Total Selections', 'Value': this.metrics.totalSelections },
-        { 'Metric': 'Active Selections', 'Value': this.metrics.activeSelections },
-        { 'Metric': 'Completed Selections', 'Value': this.metrics.completedSelections },
-        { 'Metric': 'Pending Selections', 'Value': this.metrics.pendingSelections },
-        { 'Metric': 'Total Documents', 'Value': this.metrics.totalDocuments },
-        { 'Metric': 'Pending Documents', 'Value': this.metrics.pendingDocuments }
+        { '指标': '总用户数', '数值': this.metrics.totalUsers },
+        { '指标': '发布课题数', '数值': this.metrics.totalTopics },
+        { '指标': '选题总数', '数值': this.metrics.totalSelections },
+        { '指标': '进行中选题', '数值': this.metrics.activeSelections },
+        { '指标': '已完成选题', '数值': this.metrics.completedSelections },
+        { '指标': '待处理选题', '数值': this.metrics.pendingSelections },
+        { '指标': '文档总数', '数值': this.metrics.totalDocuments },
+        { '指标': '待审核文档', '数值': this.metrics.pendingDocuments }
       ]
-      const fileName = `System_Stats_${new Date().toISOString().slice(0, 10)}.xlsx`
-      exportToExcel(exportData, 'System Stats', fileName)
+      const fileName = `系统统计_${new Date().toISOString().slice(0, 10)}.xlsx`
+      exportToExcel(exportData, '系统统计', fileName)
       this.$message.success('导出成功')
     },
     

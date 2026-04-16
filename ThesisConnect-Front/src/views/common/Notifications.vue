@@ -34,7 +34,9 @@
 
       <el-table v-loading="loading" :data="rows" style="width: 100%">
         <el-table-column prop="title" label="标题" min-width="180" />
-        <el-table-column prop="bizType" label="类型" width="160" />
+        <el-table-column label="类型" width="160">
+          <template slot-scope="scope">{{ bizTypeLabel(scope.row.bizType) }}</template>
+        </el-table-column>
         <el-table-column prop="content" label="内容" min-width="220" show-overflow-tooltip />
         <el-table-column label="时间" width="170">
           <template slot-scope="scope">{{ formatTime(scope.row.createTime) }}</template>
@@ -164,6 +166,16 @@ export default {
     formatTime(t) {
       if (!t) return '-'
       return String(t).replace('T', ' ').slice(0, 19)
+    },
+    bizTypeLabel(code) {
+      if (!code) return '—'
+      const map = {
+        SELECTION_SUBMITTED: '选题申请',
+        SELECTION_APPROVED: '选题已通过',
+        SELECTION_REJECTED: '选题未通过',
+        PROGRESS_NODE_REVIEWED: '阶段材料审核'
+      }
+      return map[code] || code
     }
   }
 }

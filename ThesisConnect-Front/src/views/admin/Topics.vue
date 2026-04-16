@@ -770,19 +770,19 @@ export default {
         return
       }
       const exportData = this.topics.map(topic => ({
-        'Title': topic.title,
-        'Teacher': topic.teacherName,
-        'Major': topic.major,
-        'Difficulty': this.getDifficultyText(topic.difficulty),
-        'Max Students': topic.maxStudents,
-        'Selected': topic.selectedCount,
-        'Status': this.getStatusText(topic.status),
-        'Views': topic.viewCount,
-        'Rating': topic.rating || 'N/A',
-        'Deadline': topic.deadline ? new Date(topic.deadline).toLocaleDateString() : 'N/A'
+        '课题名称': topic.title,
+        '指导教师': topic.teacherName,
+        '专业': topic.major,
+        '难度': this.getDifficultyText(topic.difficulty),
+        '最大人数': topic.maxStudents,
+        '已选人数': topic.selectedCount,
+        '状态': this.getStatusText(topic.status),
+        '浏览量': topic.viewCount,
+        '评分': topic.rating != null && topic.rating !== '' ? topic.rating : '—',
+        '截止时间': topic.deadline ? new Date(topic.deadline).toLocaleDateString() : '—'
       }))
-      const fileName = `Topics_${new Date().toISOString().slice(0, 10)}.xlsx`
-      exportToExcel(exportData, 'Topics', fileName)
+      const fileName = `课题列表_${new Date().toISOString().slice(0, 10)}.xlsx`
+      exportToExcel(exportData, '课题列表', fileName)
       this.$message.success('导出成功')
     },
     

@@ -217,12 +217,19 @@ export default {
         parts.push(`同一指导教师名下最多 ${r.max_selections_per_teacher_per_student} 条有效申请。`)
       }
       if (r.selection_start_time || r.selection_end_time) {
-        parts.push(`开放窗口：${r.selection_start_time || '—'} ～ ${r.selection_end_time || '—'}`)
+        parts.push(
+          `开放窗口：${this.formatRuleDateTime(r.selection_start_time)} ～ ${this.formatRuleDateTime(r.selection_end_time)}`
+        )
       }
       return parts.join(' ')
     }
   },
   methods: {
+    /** 展示用：去掉 ISO 日期时间中的 T */
+    formatRuleDateTime(iso) {
+      if (!iso) return '—'
+      return String(iso).replace('T', ' ')
+    },
     async loadSelectionRules() {
       try {
         const res = await publicApi.getSelectionRules()

@@ -93,6 +93,18 @@ public class Selection {
     private String problems;
 
     /**
+     * 套用的进度链路ID（管理员维护的预定节点）
+     */
+    @TableField("progress_chain_id")
+    private Long progressChainId;
+
+    /**
+     * 已完成节点数量（用于在链路上计算进度，由教师/管理员推进）
+     */
+    @TableField("progress_completed_count")
+    private Integer progressCompletedCount;
+
+    /**
      * 最终成绩
      */
     @TableField("final_grade")

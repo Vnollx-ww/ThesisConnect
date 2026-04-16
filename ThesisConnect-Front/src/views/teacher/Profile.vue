@@ -323,6 +323,7 @@ export default {
       
       // 用户基本信息
       userInfo: {
+        username: '',
         name: '',
         teacherId: '',
         gender: '',
@@ -362,6 +363,7 @@ export default {
           const userData = response.data
           // 更新用户基本信息
           this.userInfo = {
+            username: userData.username || '',
             name: userData.realName || userData.username || '',
             teacherId: userData.studentId || '',
             gender: userData.gender || '',
@@ -557,16 +559,16 @@ export default {
     
     exportData() {
       const exportData = [
-        { 'Field': 'Username', 'Value': this.userInfo.name },
-        { 'Field': 'Real Name', 'Value': this.userInfo.name },
-        { 'Field': 'Email', 'Value': this.userInfo.email },
-        { 'Field': 'Phone', 'Value': this.userInfo.phone },
-        { 'Field': 'Department', 'Value': this.userInfo.department || '' },
-        { 'Field': 'Title', 'Value': this.userInfo.title || '' },
-        { 'Field': 'Student ID', 'Value': this.userInfo.teacherId || '' }
+        { '项目': '登录名', '内容': this.userInfo.username || this.userInfo.name },
+        { '项目': '姓名', '内容': this.userInfo.name },
+        { '项目': '邮箱', '内容': this.userInfo.email },
+        { '项目': '手机', '内容': this.userInfo.phone },
+        { '项目': '院系', '内容': this.userInfo.department || '' },
+        { '项目': '职称', '内容': this.userInfo.title || '' },
+        { '项目': '工号', '内容': this.userInfo.teacherId || '' }
       ]
-      const fileName = `Teacher_Profile_${this.userInfo.name}_${new Date().toISOString().slice(0, 10)}.xlsx`
-      exportToExcel(exportData, 'Profile', fileName)
+      const fileName = `教师个人资料_${this.userInfo.name}_${new Date().toISOString().slice(0, 10)}.xlsx`
+      exportToExcel(exportData, '个人资料', fileName)
       this.$message.success('导出成功')
     }
   }

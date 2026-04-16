@@ -704,18 +704,18 @@ export default {
         return
       }
       const exportData = this.users.map(user => ({
-        'Username': user.username,
-        'Real Name': user.realName,
-        'Role': this.getRoleText(user.role),
-        'Email': user.email,
-        'Phone': user.phone,
-        'Department': user.department || '',
-        'Student ID': user.studentId || '',
-        'Status': this.getStatusText(user.status),
-        'Created': user.createTime ? new Date(user.createTime).toLocaleString() : ''
+        '用户名': user.username,
+        '姓名': user.realName,
+        '角色': this.getRoleText(user.role),
+        '邮箱': user.email,
+        '手机': user.phone,
+        '院系': user.department || '',
+        '学号': user.studentId || '',
+        '状态': this.getStatusText(user.status),
+        '创建时间': user.createTime ? new Date(user.createTime).toLocaleString() : ''
       }))
-      const fileName = `Users_${new Date().toISOString().slice(0, 10)}.xlsx`
-      exportToExcel(exportData, 'Users', fileName)
+      const fileName = `用户列表_${new Date().toISOString().slice(0, 10)}.xlsx`
+      exportToExcel(exportData, '用户列表', fileName)
       this.$message.success('导出成功')
     },
     
@@ -728,11 +728,11 @@ export default {
     
     downloadTemplate() {
       const templateData = [
-        { 'username': 'zhangsan', 'realName': '张三', 'role': 'student', 'email': 'zhangsan@example.com', 'phone': '13800138000', 'studentId': '2024001', 'department': '计算机科学与技术', 'password': '123456' },
-        { 'username': 'lisi', 'realName': '李四', 'role': 'teacher', 'email': 'lisi@example.com', 'phone': '13900139000', 'studentId': 'T001', 'department': '软件学院', 'password': '123456' }
+        { '用户名': 'zhangsan', '姓名': '张三', '角色': 'student', '邮箱': 'zhangsan@example.com', '手机': '13800138000', '学号': '2024001', '院系': '计算机科学与技术', '密码': '123456' },
+        { '用户名': 'lisi', '姓名': '李四', '角色': 'teacher', '邮箱': 'lisi@example.com', '手机': '13900139000', '学号': 'T001', '院系': '软件学院', '密码': '123456' }
       ];
       const fileName = '用户导入模板.xlsx';
-      exportToExcel(templateData, 'Template', fileName);
+      exportToExcel(templateData, '导入模板', fileName);
     },
     
     beforeUpload(file) {

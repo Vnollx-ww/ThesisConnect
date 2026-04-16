@@ -547,21 +547,28 @@ export default {
       this.$message.info('手机验证功能开发中...');
     },
 
+    formatGenderForExport(g) {
+      if (g == null || g === '') return ''
+      const map = { male: '男', female: '女', M: '男', F: '女', '1': '男', '0': '女' }
+      return map[g] || g
+    },
+
     exportData() {
+      const genderText = this.formatGenderForExport(this.userInfo.gender)
       const exportData = [
-        { 'Field': 'Username', 'Value': this.userInfo.username },
-        { 'Field': 'Real Name', 'Value': this.userInfo.name },
-        { 'Field': 'Email', 'Value': this.userInfo.email },
-        { 'Field': 'Phone', 'Value': this.userInfo.phone },
-        { 'Field': 'Department', 'Value': this.userInfo.department || '' },
-        { 'Field': 'Major', 'Value': this.userInfo.major || '' },
-        { 'Field': 'Class', 'Value': this.userInfo.className || '' },
-        { 'Field': 'Student ID', 'Value': this.userInfo.studentId || '' },
-        { 'Field': 'Gender', 'Value': this.userInfo.gender || '' },
-        { 'Field': 'Birthday', 'Value': this.userInfo.birthday || '' }
+        { '项目': '用户名', '内容': this.userInfo.username },
+        { '项目': '姓名', '内容': this.userInfo.name },
+        { '项目': '邮箱', '内容': this.userInfo.email },
+        { '项目': '手机', '内容': this.userInfo.phone },
+        { '项目': '院系', '内容': this.userInfo.department || '' },
+        { '项目': '专业', '内容': this.userInfo.major || '' },
+        { '项目': '班级', '内容': this.userInfo.className || '' },
+        { '项目': '学号', '内容': this.userInfo.studentId || '' },
+        { '项目': '性别', '内容': genderText },
+        { '项目': '出生日期', '内容': this.userInfo.birthday || '' }
       ]
-      const fileName = `Student_Profile_${this.userInfo.username}_${new Date().toISOString().slice(0, 10)}.xlsx`
-      exportToExcel(exportData, 'Profile', fileName)
+      const fileName = `学生个人资料_${this.userInfo.username}_${new Date().toISOString().slice(0, 10)}.xlsx`
+      exportToExcel(exportData, '个人资料', fileName)
       this.$message.success('导出成功')
     }
   }

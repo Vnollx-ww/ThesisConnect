@@ -48,7 +48,7 @@ const router = new VueRouter({
                 },
                 {
                     path: 'notifications',
-                    name: 'student-notifications',
+                    name: '学生通知',
                     component: () => import('@/views/common/Notifications.vue')
                 }
             ]
@@ -85,7 +85,7 @@ const router = new VueRouter({
                 },
                 {
                     path: 'notifications',
-                    name: 'teacher-notifications',
+                    name: '教师通知',
                     component: () => import('@/views/common/Notifications.vue')
                 }
             ]
@@ -116,6 +116,11 @@ const router = new VueRouter({
                     component: () => import('@/views/admin/Topics.vue')
                 },
                 {
+                    path: 'progress-chain',
+                    name: '进度链路',
+                    component: () => import('@/views/admin/ProgressChain.vue')
+                },
+                {
                     path: 'system',
                     name: '系统设置',
                     component: () => import('@/views/admin/System.vue')
@@ -127,7 +132,7 @@ const router = new VueRouter({
                 },
                 {
                     path: 'notifications',
-                    name: 'admin-notifications',
+                    name: '管理员通知',
                     component: () => import('@/views/common/Notifications.vue')
                 }
             ]

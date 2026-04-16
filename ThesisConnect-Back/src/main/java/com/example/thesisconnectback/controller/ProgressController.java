@@ -3,6 +3,7 @@ package com.example.thesisconnectback.controller;
 import com.example.thesisconnectback.common.Result;
 import com.example.thesisconnectback.entity.Progress;
 import com.example.thesisconnectback.service.ProgressService;
+import com.example.thesisconnectback.service.SelectionService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -23,38 +24,19 @@ public class ProgressController {
     @Autowired
     private ProgressService progressService;
 
+    @Autowired
+    private SelectionService selectionService;
+
     /**
      * 更新进度
      */
     @PostMapping("/update")
     public Result<Void> updateProgress(@RequestBody Map<String, Object> progressForm, HttpServletRequest request) {
-        try {
-            // 检查权限（只有学生可以更新进度）
-            String role = (String) request.getAttribute("role");
-            if (!"student".equals(role)) {
-                return Result.forbidden("只有学生可以更新进度");
-            }
-
-            Long userId = (Long) request.getAttribute("userId");
-            String username = (String) request.getAttribute("username");
-            Long selectionId = Long.valueOf(progressForm.get("selectionId").toString());
-            String milestoneTitle = (String) progressForm.get("milestoneTitle");
-            String milestoneStatus = (String) progressForm.get("milestoneStatus");
-            Integer percentage = Integer.valueOf(progressForm.get("percentage").toString());
-            String description = (String) progressForm.get("description");
-            String problems = (String) progressForm.get("problems");
-            String reportUrl = (String) progressForm.get("reportUrl");
-
-            boolean success = progressService.updateProgress(selectionId, milestoneTitle, milestoneStatus, percentage, description, problems, reportUrl, userId, username);
-            if (success) {
-                return Result.success("进度更新成功");
-            } else {
-                return Result.error("进度更新失败");
-            }
-        } catch (Exception e) {
-            log.error("更新进度失败：", e);
-            return Result.error("更新进度失败：" + e.getMessage());
+        String role = (String) request.getAttribute("role");
+        if ("student".equals(role)) {
+            return Result.forbidden("进度由指导教师根据管理员预定链路推进，不可自行填报");
         }
+        return Result.forbidden("请使用选题进度链路，不再使用本接口");
     }
 
     /**
@@ -90,30 +72,11 @@ public class ProgressController {
      */
     @PostMapping("/milestone")
     public Result<Void> addMilestone(@RequestBody Map<String, Object> milestoneForm, HttpServletRequest request) {
-        try {
-            // 检查权限（只有学生可以添加里程碑）
-            String role = (String) request.getAttribute("role");
-            if (!"student".equals(role)) {
-                return Result.forbidden("只有学生可以添加里程碑");
-            }
-
-            Long userId = (Long) request.getAttribute("userId");
-            String username = (String) request.getAttribute("username");
-            Long selectionId = Long.valueOf(milestoneForm.get("selectionId").toString());
-            String title = (String) milestoneForm.get("title");
-            String description = (String) milestoneForm.get("description");
-            String status = (String) milestoneForm.get("status");
-
-            boolean success = progressService.addMilestone(selectionId, title, description, status, userId, username);
-            if (success) {
-                return Result.success("里程碑添加成功");
-            } else {
-                return Result.error("里程碑添加失败");
-            }
-        } catch (Exception e) {
-            log.error("添加里程碑失败：", e);
-            return Result.error("添加里程碑失败：" + e.getMessage());
+        String role = (String) request.getAttribute("role");
+        if ("student".equals(role)) {
+            return Result.forbidden("里程碑由管理员在进度链路中配置，不可自行添加");
         }
+        return Result.forbidden("权限不足");
     }
 
     /**
@@ -190,25 +153,33 @@ public class ProgressController {
      */
     @PutMapping("/milestone/status")
     public Result<Void> updateMilestoneStatus(@RequestBody Map<String, Object> updateData, HttpServletRequest request) {
+        String role = (String) request.getAttribute("role");
+        if ("student".equals(role)) {
+            return Result.forbidden("进度节点由指导教师推进，不可自行修改");
+        }
+        return Result.forbidden("请使用选题进度链路接口");
+    }
+
+    /**
+     * 预定进度链路展示（节点状态由教师/管理员推进）
+     */
+    @GetMapping("/chain-view/{selectionId}")
+    public Result<Map<String, Object>> getChainView(@PathVariable Long selectionId, HttpServletRequest request) {
         try {
-            // 检查权限（只有学生可以更新里程碑状态）
+            Long userId = (Long) request.getAttribute("userId");
             String role = (String) request.getAttribute("role");
-            if (!"student".equals(role)) {
-                return Result.forbidden("只有学生可以更新里程碑状态");
+            Map<String, Object> view = selectionService.getProgressChainView(selectionId, userId, role);
+            if (view == null) {
+                return Result.forbidden("权限不足");
             }
-
-            Long milestoneId = Long.valueOf(updateData.get("id").toString());
-            String milestoneStatus = (String) updateData.get("milestoneStatus");
-
-            boolean success = progressService.updateMilestoneStatus(milestoneId, milestoneStatus);
-            if (success) {
-                return Result.success("里程碑状态更新成功");
-            } else {
-                return Result.error("里程碑状态更新失败");
+            if (Boolean.TRUE.equals(view.get("_notFound"))) {
+                return Result.notFound("选题记录不存在");
             }
+            view.remove("_notFound");
+            return Result.success(view);
         } catch (Exception e) {
-            log.error("更新里程碑状态失败：", e);
-            return Result.error("更新里程碑状态失败：" + e.getMessage());
+            log.error("获取进度链路失败：", e);
+            return Result.error("获取进度链路失败");
         }
     }
 

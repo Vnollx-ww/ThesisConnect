@@ -10,6 +10,7 @@ import com.example.thesisconnectback.exception.BusinessException;
 import com.example.thesisconnectback.mail.MailNotificationService;
 import com.example.thesisconnectback.service.SiteNotificationService;
 import com.example.thesisconnectback.service.UserService;
+import com.example.thesisconnectback.service.SelectionNodeSubmissionService;
 import com.example.thesisconnectback.service.SelectionService;
 import com.example.thesisconnectback.service.SystemLogService;
 import com.example.thesisconnectback.service.TopicService;
@@ -51,6 +52,9 @@ public class SelectionController {
 
     @Autowired
     private SiteNotificationService siteNotificationService;
+
+    @Autowired
+    private SelectionNodeSubmissionService selectionNodeSubmissionService;
 
     /**
      * 获取选题列表（分页）
@@ -328,43 +332,73 @@ public class SelectionController {
     }
     
     /**
-     * 更新进度
+     * 更新进度（已停用：进度由管理员预定链路与教师推进）
      */
     @PutMapping("/{id}/progress")
     public Result<Void> updateProgress(@PathVariable Long id, @RequestBody Map<String, Object> progressForm, HttpServletRequest request) {
+        return Result.forbidden("进度由预定链路管理，请由指导教师在「学生管理」中推进节点");
+    }
+
+    /**
+     * 教师/管理员推进或回退预定进度链上的节点
+     */
+    @PutMapping("/{id}/progress-chain-step")
+    public Result<Void> adjustProgressChainStep(@PathVariable Long id, @RequestBody Map<String, Object> body, HttpServletRequest request) {
         try {
-            // 检查权限
             String role = (String) request.getAttribute("role");
             Long userId = (Long) request.getAttribute("userId");
-
-            Selection selection = selectionService.getById(id);
-            if (selection == null) {
-                return Result.notFound("选题记录不存在");
-            }
-
-            // 只有学生本人可以更新进度
-            if (!userId.equals(selection.getStudentId())) {
+            if (!"teacher".equals(role) && !"admin".equals(role)) {
                 return Result.forbidden("权限不足");
             }
-
-            Integer progress = (Integer) progressForm.get("progress");
-            String description = (String) progressForm.get("description");
-            String problems = (String) progressForm.get("problems");
-
-            if (progress == null || progress < 0 || progress > 100) {
-                return Result.badRequest("进度值无效");
+            String action = body.get("action") != null ? body.get("action").toString() : "";
+            Integer setCount = null;
+            if (body.get("setCount") != null) {
+                setCount = Integer.valueOf(body.get("setCount").toString());
             }
-
-            boolean success = selectionService.updateProgress(id, progress, description, problems);
-            if (success) {
-                return Result.success("进度更新成功");
-            } else {
-                return Result.error("进度更新失败");
-            }
+            boolean ok = selectionService.adjustProgressChainStep(id, action, setCount, userId, role);
+            return ok ? Result.<Void>success("已更新", null) : Result.error("更新失败（请确认选题已确认且已套用进度链路）");
+        } catch (BusinessException e) {
+            throw e;
         } catch (Exception e) {
-            log.error("更新进度失败：", e);
-            return Result.error("更新进度失败");
+            log.error("调整进度链失败：", e);
+            return Result.error("操作失败");
         }
+    }
+
+    /**
+     * 学生提交当前进度阶段材料（供教师审核后再推进链路）
+     */
+    @PostMapping("/{id}/progress-node-submission")
+    public Result<Void> submitProgressNodeSubmission(@PathVariable Long id, @RequestBody Map<String, Object> body, HttpServletRequest request) {
+        String role = (String) request.getAttribute("role");
+        Long userId = (Long) request.getAttribute("userId");
+        if (!"student".equals(role)) {
+            return Result.forbidden("仅学生可提交阶段材料");
+        }
+        String description = body.get("description") != null ? body.get("description").toString() : null;
+        String reportUrl = body.get("reportUrl") != null ? body.get("reportUrl").toString() : null;
+        selectionNodeSubmissionService.submitMaterial(id, userId, description, reportUrl);
+        return Result.success("提交成功", null);
+    }
+
+    /**
+     * 教师/管理员审核阶段材料
+     */
+    @PostMapping("/{selectionId}/progress-node-submissions/{submissionId}/review")
+    public Result<Void> reviewProgressNodeSubmission(
+            @PathVariable Long selectionId,
+            @PathVariable Long submissionId,
+            @RequestBody Map<String, Object> body,
+            HttpServletRequest request) {
+        String role = (String) request.getAttribute("role");
+        Long userId = (Long) request.getAttribute("userId");
+        if (!"teacher".equals(role) && !"admin".equals(role)) {
+            return Result.forbidden("权限不足");
+        }
+        String status = body.get("status") != null ? body.get("status").toString() : "";
+        String rejectReason = body.get("rejectReason") != null ? body.get("rejectReason").toString() : null;
+        selectionNodeSubmissionService.reviewMaterial(selectionId, submissionId, userId, role, status, rejectReason);
+        return Result.success("已审核", null);
     }
 
     /**

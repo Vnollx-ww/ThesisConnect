@@ -77,6 +77,8 @@ CREATE TABLE IF NOT EXISTS sys_selection (
     progress INT DEFAULT 0 COMMENT '进度百分比',
     progress_description TEXT COMMENT '进度描述',
     problems TEXT COMMENT '遇到的问题',
+    progress_chain_id BIGINT NULL COMMENT '套用的进度链路ID',
+    progress_completed_count INT NOT NULL DEFAULT 0 COMMENT '已完成节点数',
     final_grade VARCHAR(10) COMMENT '最终成绩',
     teacher_evaluation TEXT COMMENT '教师评价',
     create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -154,6 +156,53 @@ CREATE TABLE IF NOT EXISTS sys_progress (
     FOREIGN KEY (topic_id) REFERENCES sys_topic(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='进度记录表';
 
+-- 进度链路（管理员维护）
+CREATE TABLE IF NOT EXISTS sys_progress_chain (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '链路ID',
+    name VARCHAR(100) NOT NULL COMMENT '链路名称',
+    remark VARCHAR(500) COMMENT '备注',
+    is_default TINYINT NOT NULL DEFAULT 0 COMMENT '是否默认',
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted INT NOT NULL DEFAULT 0,
+    INDEX idx_default (is_default),
+    INDEX idx_deleted (deleted)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='进度链路';
+
+CREATE TABLE IF NOT EXISTS sys_progress_chain_node (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '节点ID',
+    chain_id BIGINT NOT NULL COMMENT '所属链路',
+    title VARCHAR(200) NOT NULL COMMENT '节点标题',
+    description TEXT COMMENT '说明',
+    sort_order INT NOT NULL DEFAULT 0 COMMENT '顺序',
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted INT NOT NULL DEFAULT 0,
+    INDEX idx_chain (chain_id),
+    INDEX idx_deleted (deleted),
+    FOREIGN KEY (chain_id) REFERENCES sys_progress_chain(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='进度链路节点';
+
+-- 进度链路节点材料提交（学生按阶段提交，教师审核通过后方可推进该阶段）
+CREATE TABLE IF NOT EXISTS sys_selection_node_submission (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '主键',
+    selection_id BIGINT NOT NULL COMMENT '选题ID',
+    node_index INT NOT NULL COMMENT '链路节点序号 0..n-1',
+    description TEXT COMMENT '阶段说明',
+    report_url VARCHAR(500) COMMENT '材料链接或文档地址',
+    status VARCHAR(20) NOT NULL DEFAULT 'pending' COMMENT 'pending-待审核 approved-已通过 rejected-已驳回',
+    reject_reason TEXT COMMENT '驳回原因',
+    reviewer_id BIGINT COMMENT '审核人',
+    reviewer_name VARCHAR(50) COMMENT '审核人姓名',
+    review_time DATETIME COMMENT '审核时间',
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted INT NOT NULL DEFAULT 0,
+    INDEX idx_sel (selection_id),
+    INDEX idx_sel_node (selection_id, node_index),
+    FOREIGN KEY (selection_id) REFERENCES sys_selection(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='进度链路节点材料';
+
 -- 系统日志表
 CREATE TABLE IF NOT EXISTS sys_log (
     id BIGINT AUTO_INCREMENT PRIMARY KEY COMMENT '日志ID',
@@ -189,6 +238,17 @@ INSERT INTO sys_user (username, password, real_name, email, phone, role, departm
 ('student002', '$2a$10$w/hSQQWocbBBYaSNIXwEfOlsfeHUyITohDABySIxDRUWpic8gbHci', '李四', 'lisi@student.edu.cn', '13800000005', 'student', '软件工程', '2021001002', 1),
 ('student003', '$2a$10$w/hSQQWocbBBYaSNIXwEfOlsfeHUyITohDABySIxDRUWpic8gbHci', '王五', 'wangwu@student.edu.cn', '13800000006', 'student', '网络工程', '2021001003', 1),
 ('student004', '$2a$10$w/hSQQWocbBBYaSNIXwEfOlsfeHUyITohDABySIxDRUWpic8gbHci', '赵六', 'zhaoliu@student.edu.cn', '13800000007', 'student', '信息安全', '2021001004', 1);
+
+-- 默认进度链路（管理员可在「进度链路」中修改）
+INSERT INTO sys_progress_chain (name, remark, is_default, deleted) VALUES
+('默认毕业论文进度', '选题确认后自动套用', 1, 0);
+SET @pc_chain_id = LAST_INSERT_ID();
+INSERT INTO sys_progress_chain_node (chain_id, title, description, sort_order, deleted) VALUES
+(@pc_chain_id, '选题与开题', '完成选题与开题材料', 1, 0),
+(@pc_chain_id, '需求分析', '完成需求分析与开题报告', 2, 0),
+(@pc_chain_id, '设计与实现', '系统设计与编码实现', 3, 0),
+(@pc_chain_id, '论文撰写', '撰写毕业论文', 4, 0),
+(@pc_chain_id, '答辩与结题', '答辩与结题', 5, 0);
 
 -- 插入示例课题
 INSERT INTO sys_topic (title, description, teacher_id, teacher_name, major, difficulty, max_students, requirements, expected_outcome, deadline, status) VALUES

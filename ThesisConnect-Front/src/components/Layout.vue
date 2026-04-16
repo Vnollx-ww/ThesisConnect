@@ -72,6 +72,10 @@
             <i class="el-icon-document"></i>
             <span slot="title">课题管理</span>
           </el-menu-item>
+          <el-menu-item index="/admin/progress-chain">
+            <i class="el-icon-sort"></i>
+            <span slot="title">进度链路</span>
+          </el-menu-item>
           <el-menu-item index="/admin/system">
             <i class="el-icon-setting"></i>
             <span slot="title">系统设置</span>

@@ -252,7 +252,7 @@
           </div>
         </div>
         
-        <el-tabs v-model="activeTab">
+        <el-tabs v-model="activeTab" @tab-click="onStudentDetailTab">
           <el-tab-pane label="基本信息" name="basic">
             <div class="info-content">
               <el-row :gutter="20">
@@ -325,84 +325,65 @@
             <div class="progress-content">
               <div class="progress-overview">
                 <el-progress 
-                  :percentage="selectedStudent.progress || 0" 
-                  :color="getProgressColor(selectedStudent.progress || 0)"
+                  :percentage="chainProgressPercent" 
+                  :color="getProgressColor(chainProgressPercent)"
                   :stroke-width="8">
                 </el-progress>
                 <p style="text-align: center; margin-top: 10px; color: #666;">
-                  整体进度：{{ selectedStudent.progress || 0 }}%
+                  整体进度：{{ chainProgressPercent }}%
+                </p>
+                <p v-if="studentChainView && studentChainView.chainName" style="text-align:center;color:#909399;font-size:13px;">
+                  链路：{{ studentChainView.chainName }}
                 </p>
               </div>
+
+              <div v-if="studentChainView && studentChainView.currentNodeSubmission && studentChainView.currentNodeSubmission.status === 'pending'" class="node-submission-review" style="margin:16px 0;padding:16px;background:#f9fafc;border-radius:8px;border:1px solid #ebeef5;">
+                <div style="font-weight:600;margin-bottom:10px;color:#303133;">本阶段待审材料</div>
+                <div style="font-size:13px;color:#606266;line-height:1.6;margin-bottom:8px;">
+                  <div v-if="studentChainView.currentNodeSubmission.description"><strong>说明：</strong>{{ studentChainView.currentNodeSubmission.description }}</div>
+                  <div v-if="studentChainView.currentNodeSubmission.reportUrl" style="margin-top:6px;">
+                    <strong>链接：</strong>
+                    <a :href="studentChainView.currentNodeSubmission.reportUrl" target="_blank" rel="noopener">{{ studentChainView.currentNodeSubmission.reportUrl }}</a>
+                  </div>
+                  <div v-if="!studentChainView.currentNodeSubmission.description && !studentChainView.currentNodeSubmission.reportUrl" style="color:#909399;">（无文字说明与链接）</div>
+                </div>
+                <el-button type="success" size="small" @click="reviewNodeSubmission">通过</el-button>
+                <el-button type="danger" size="small" plain @click="openRejectNodeDialog">驳回</el-button>
+              </div>
+
+              <div v-if="canAdjustChain" class="chain-actions" style="text-align:center;margin:16px 0;">
+                <el-button-group>
+                  <el-button size="small" icon="el-icon-back" :loading="chainStepLoading" @click="adjustChainStep('prev')">回退一阶段</el-button>
+                  <el-button type="primary" size="small" icon="el-icon-right" :loading="chainStepLoading" @click="adjustChainStep('next')">完成本阶段</el-button>
+                </el-button-group>
+                <p style="font-size:12px;color:#909399;margin-top:8px;">请先在上方审阅学生提交的本阶段材料并点击「通过」后，再点击「完成本阶段」推进；与管理员「进度链路」配置一致。</p>
+              </div>
+              <el-alert v-else-if="selectedStudent && ['confirmed','active'].includes(selectedStudent.selection_status)" title="当前不可调整" type="info" :closable="false" show-icon style="margin-bottom:12px;">
+                请先确保选题已确认且已套用进度链路。
+              </el-alert>
               
-              <!-- 进度时间线 -->
-              <div class="progress-timeline" v-if="studentProgressList && studentProgressList.length > 0">
-                <h4>进度记录</h4>
+              <div class="progress-timeline" v-if="studentChainView && studentChainView.nodes && studentChainView.nodes.length">
+                <h4>进度节点</h4>
                 <el-timeline>
                   <el-timeline-item
-                    v-for="(progress, index) in studentProgressList"
-                    :key="index"
-                    :timestamp="formatDateTime(progress.createTime)"
-                    :type="progress.milestoneStatus === 'completed' ? 'success' : progress.milestoneStatus === 'current' ? 'primary' : 'info'">
+                    v-for="(node, index) in studentChainView.nodes"
+                    :key="node.id || index"
+                    :type="node.state === 'completed' ? 'success' : node.state === 'current' ? 'primary' : 'info'">
                     <div class="milestone-content">
                       <div class="milestone-header">
-                        <h4>{{ progress.milestoneTitle || '进度更新' }}</h4>
-                        <div class="milestone-status">
-                          <el-tag 
-                            :type="progress.milestoneStatus === 'completed' ? 'success' : progress.milestoneStatus === 'current' ? 'primary' : 'info'"
-                            size="small">
-                            {{ getMilestoneStatusText(progress.milestoneStatus) }}
-                          </el-tag>
-                        </div>
+                        <h4>{{ node.title }}</h4>
+                        <el-tag size="small" :type="node.state === 'completed' ? 'success' : node.state === 'current' ? 'primary' : 'info'">
+                          {{ chainNodeStateText(node.state) }}
+                        </el-tag>
                       </div>
-                      <p class="milestone-description">{{ progress.description || progress.milestoneDescription || '暂无描述' }}</p>
-                      <div class="milestone-footer">
-                        <span class="progress-text">进度: {{ progress.percentage }}%</span>
-                        <span class="progress-time">{{ formatDateTime(progress.createTime) }}</span>
-                      </div>
-                      
-                      <!-- 报告文档与审核状态 -->
-                      <div class="review-section" style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #eee;">
-                        <div v-if="progress.reportUrl" style="margin-bottom: 5px;">
-                          <a :href="progress.reportUrl" target="_blank" style="color: #409EFF; text-decoration: none; display: flex; align-items: center;">
-                            <i class="el-icon-document" style="margin-right: 5px;"></i> 查看报告文档
-                          </a>
-                        </div>
-                        
-                        <div class="audit-status" style="display: flex; align-items: center; justify-content: space-between; margin-top: 5px;">
-                          <div>
-                            <span style="color: #909399; font-size: 12px; margin-right: 5px;">审核状态:</span>
-                            <el-tag 
-                              size="mini" 
-                              effect="dark"
-                              :type="progress.status === 'approved' ? 'success' : progress.status === 'rejected' ? 'danger' : 'warning'">
-                              {{ progress.status === 'approved' ? '审核通过' : progress.status === 'rejected' ? '审核未通过' : '待审核' }}
-                            </el-tag>
-                          </div>
-                          
-                          <div v-if="progress.status === 'pending' || !progress.status" class="audit-actions">
-                            <el-button type="text" size="mini" style="color: #67C23A" @click="handleReview(progress, 'approved')">通过</el-button>
-                            <el-button type="text" size="mini" style="color: #F56C6C" @click="handleReview(progress, 'rejected')">拒绝</el-button>
-                          </div>
-                        </div>
-                        
-                        <div v-if="progress.status === 'rejected'" class="reject-reason" style="margin-top: 5px; background-color: #FEF0F0; padding: 5px 10px; border-radius: 4px;">
-                          <span style="color: #F56C6C; font-size: 12px;">拒绝原因: {{ progress.rejectReason }}</span>
-                        </div>
-                      </div>
-                      
-                      <div class="problems-section" v-if="progress.problems">
-                        <h5>遇到的问题</h5>
-                        <p>{{ progress.problems }}</p>
-                      </div>
+                      <p v-if="node.description" class="milestone-description">{{ node.description }}</p>
                     </div>
                   </el-timeline-item>
                 </el-timeline>
               </div>
-              
-              <!-- 无进度记录时的提示 -->
               <div v-else class="no-progress">
                 <i class="el-icon-time"></i>
-                <p>暂无进度记录</p>
+                <p>暂无进度链路数据（学生确认选题后将显示）</p>
               </div>
             </div>
           </el-tab-pane>
@@ -429,6 +410,14 @@
           </el-tab-pane>
         </el-tabs>
       </div>
+    </el-dialog>
+
+    <el-dialog title="驳回阶段材料" :visible.sync="rejectNodeDialogVisible" width="480px" append-to-body>
+      <el-input v-model="rejectNodeReason" type="textarea" :rows="4" maxlength="500" show-word-limit placeholder="请说明驳回原因" />
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="rejectNodeDialogVisible = false">取消</el-button>
+        <el-button type="danger" :loading="reviewNodeLoading" @click="confirmRejectNode">确认驳回</el-button>
+      </span>
     </el-dialog>
     
     <!-- 发送消息对话框 -->
@@ -587,26 +576,6 @@
       </span>
     </el-dialog>
 
-    <!-- 进度审核拒绝原因对话框 -->
-    <el-dialog
-      title="拒绝进度更新"
-      :visible.sync="reviewDialogVisible"
-      width="400px">
-      <el-form :model="reviewForm">
-        <el-form-item label="拒绝原因">
-          <el-input
-            v-model="reviewForm.rejectReason"
-            type="textarea"
-            :rows="3"
-            placeholder="请输入拒绝原因，以便学生修改">
-          </el-input>
-        </el-form-item>
-      </el-form>
-      <span slot="footer" class="dialog-footer">
-        <el-button @click="reviewDialogVisible = false">取消</el-button>
-        <el-button type="danger" @click="submitReview">确认拒绝</el-button>
-      </span>
-    </el-dialog>
   </div>
 </template>
 
@@ -629,14 +598,11 @@ export default {
       activeTab: 'basic',
       selectedStudent: null,
       selectedTopic: null,
-      studentProgressList: [],
-      
-      // 进度审核相关
-      reviewDialogVisible: false,
-      currentReviewProgress: null,
-      reviewForm: {
-        rejectReason: ''
-      },
+      studentChainView: null,
+      chainStepLoading: false,
+      rejectNodeDialogVisible: false,
+      rejectNodeReason: '',
+      reviewNodeLoading: false,
       
       // 评分相关
       gradeDialogVisible: false,
@@ -705,6 +671,16 @@ export default {
       }
       
       return filtered;
+    },
+    chainProgressPercent() {
+      if (this.studentChainView && this.studentChainView.progressPercent != null) {
+        return this.studentChainView.progressPercent;
+      }
+      return this.selectedStudent ? (this.selectedStudent.progress || 0) : 0;
+    },
+    canAdjustChain() {
+      if (!this.selectedStudent || !this.selectedStudent.selection_id) return false;
+      return ['confirmed', 'active'].includes(this.selectedStudent.selection_status);
     }
   },
   mounted() {
@@ -827,8 +803,14 @@ export default {
       this.selectedStudent = student;
       this.studentDialogVisible = true;
       this.activeTab = 'basic';
-      // 加载学生进度数据
-      this.loadStudentProgress(student.id);
+      this.studentChainView = null;
+      this.loadStudentChainView();
+    },
+
+    onStudentDetailTab(tab) {
+      if (tab && tab.name === 'progress' && this.selectedStudent) {
+        this.loadStudentChainView();
+      }
     },
     
     sendMessage(student) {
@@ -968,18 +950,18 @@ export default {
         return
       }
       const exportData = this.students.map(student => ({
-        'Name': student.realName,
-        'Student ID': student.studentId,
-        'Email': student.email,
-        'Phone': student.phone,
-        'Department': student.department || '',
-        'Topic': student.topicTitle || 'Not selected',
-        'Status': this.getStatusText(student.selectionStatus),
-        'Progress': student.progress !== undefined ? student.progress + '%' : 'N/A',
-        'Teacher': student.teacherName || 'N/A'
+        '姓名': student.realName,
+        '学号': student.studentId,
+        '邮箱': student.email,
+        '手机': student.phone,
+        '院系': student.department || '',
+        '课题': student.topicTitle || '未选题',
+        '状态': this.getSelectionStatusText(student.selectionStatus),
+        '进度': student.progress !== undefined ? student.progress + '%' : '—',
+        '指导教师': student.teacherName || '—'
       }))
-      const fileName = `Students_${new Date().toISOString().slice(0, 10)}.xlsx`
-      exportToExcel(exportData, 'Students', fileName)
+      const fileName = `学生列表_${new Date().toISOString().slice(0, 10)}.xlsx`
+      exportToExcel(exportData, '学生列表', fileName)
       this.$message.success('导出成功')
     },
     
@@ -1082,104 +1064,89 @@ export default {
       return '#909399';
     },
     
-    // 加载学生进度数据
-    async loadStudentProgress(studentId) {
+    async loadStudentChainView() {
+      this.studentChainView = null;
+      if (!this.selectedStudent || !this.selectedStudent.selection_id) return;
       try {
-        const response = await progressApi.getProgressByStudent(studentId);
-        if (response.code === 200) {
-          this.studentProgressList = response.data || [];
-          // 按时间倒序排列，最新的在前面
-          this.studentProgressList.sort((a, b) => new Date(b.createTime) - new Date(a.createTime));
-        } else {
-          this.studentProgressList = [];
-          console.error('获取学生进度失败:', response.message);
+        const response = await progressApi.getChainView(this.selectedStudent.selection_id);
+        if (response.code === 200 && response.data) {
+          this.studentChainView = response.data;
+          if (response.data.progressPercent != null) {
+            this.$set(this.selectedStudent, 'progress', response.data.progressPercent);
+          }
         }
       } catch (error) {
-        console.error('加载学生进度失败:', error);
-        this.studentProgressList = [];
-      }
-    },
-    
-    // 进度审核
-    handleReview(progress, status) {
-      if (status === 'rejected') {
-        this.currentReviewProgress = progress;
-        this.reviewForm.rejectReason = '';
-        this.reviewDialogVisible = true;
-      } else {
-        this.$confirm('确定要通过这条进度更新吗？', '确认通过', {
-          confirmButtonText: '确定',
-          cancelButtonText: '取消',
-          type: 'success'
-        }).then(async () => {
-          try {
-            const reviewData = {
-              id: progress.id,
-              status: 'approved',
-              rejectReason: ''
-            };
-            const response = await progressApi.reviewProgress(reviewData);
-            if (response.code === 200) {
-              this.$message.success('审核已通过');
-              // 刷新进度列表
-              if (this.selectedStudent) {
-                await this.loadStudentProgress(this.selectedStudent.id);
-              }
-            } else {
-              this.$message.error(response.message || '操作失败');
-            }
-          } catch (error) {
-            console.error('审核失败:', error);
-            this.$message.error('审核失败，请稍后重试');
-          }
-        });
+        console.error('加载进度链路失败:', error);
       }
     },
 
-    async submitReview() {
-      if (!this.reviewForm.rejectReason.trim()) {
-        this.$message.warning('请输入拒绝原因');
+    chainNodeStateText(state) {
+      const m = { completed: '已完成', current: '进行中', pending: '待开始' };
+      return m[state] || state || '—';
+    },
+
+    async adjustChainStep(action) {
+      if (!this.selectedStudent || !this.selectedStudent.selection_id) return;
+      this.chainStepLoading = true;
+      try {
+        const res = await selectionApi.adjustProgressChainStep(this.selectedStudent.selection_id, { action });
+        if (res.code === 200) {
+          this.$message.success(action === 'next' ? '已推进到下一阶段' : '已回退');
+          await this.loadStudentChainView();
+          await this.loadStudents();
+        } else {
+          this.$message.error(res.message || '操作失败');
+        }
+      } catch (e) {
+        console.error(e);
+        this.$message.error((e && e.message) || '操作失败');
+      } finally {
+        this.chainStepLoading = false;
+      }
+    },
+
+    openRejectNodeDialog() {
+      this.rejectNodeReason = '';
+      this.rejectNodeDialogVisible = true;
+    },
+
+    async reviewNodeSubmission() {
+      await this.doReviewNodeSubmission('approved', '');
+    },
+
+    async confirmRejectNode() {
+      const reason = (this.rejectNodeReason || '').trim();
+      if (!reason) {
+        this.$message.warning('请填写驳回原因');
         return;
       }
-      
-      try {
-        const reviewData = {
-          id: this.currentReviewProgress.id,
-          status: 'rejected',
-          rejectReason: this.reviewForm.rejectReason
-        };
-        const response = await progressApi.reviewProgress(reviewData);
-        if (response.code === 200) {
-          this.$message.success('已拒绝该进度更新');
-          this.reviewDialogVisible = false;
-          // 刷新进度列表
-          if (this.selectedStudent) {
-            await this.loadStudentProgress(this.selectedStudent.id);
-          }
-        } else {
-          this.$message.error(response.message || '操作失败');
-        }
-      } catch (error) {
-        console.error('审核失败:', error);
-        this.$message.error('审核失败，请稍后重试');
-      }
+      await this.doReviewNodeSubmission('rejected', reason);
+      this.rejectNodeDialogVisible = false;
     },
 
-    // 获取里程碑状态文本
-    getMilestoneStatusText(status) {
-      const statusMap = {
-        'completed': '已完成',
-        'current': '进行中',
-        'pending': '待开始'
-      };
-      return statusMap[status] || '未知';
-    },
-    
-    // 格式化时间显示
-    formatDateTime(dateTime) {
-      if (!dateTime) return '';
-      // 将 ISO 8601 格式转换为更友好的显示格式
-      return dateTime.replace('T', ' ').replace(/\.\d{3}Z?$/, '');
+    async doReviewNodeSubmission(status, rejectReason) {
+      if (!this.selectedStudent || !this.selectedStudent.selection_id || !this.studentChainView || !this.studentChainView.currentNodeSubmission) return;
+      const sub = this.studentChainView.currentNodeSubmission;
+      if (!sub.id) return;
+      this.reviewNodeLoading = true;
+      try {
+        const res = await selectionApi.reviewProgressNodeSubmission(this.selectedStudent.selection_id, sub.id, {
+          status,
+          rejectReason: rejectReason || undefined
+        });
+        if (res.code === 200) {
+          this.$message.success(status === 'approved' ? '已通过' : '已驳回');
+          await this.loadStudentChainView();
+          await this.loadStudents();
+        } else {
+          this.$message.error(res.message || '操作失败');
+        }
+      } catch (e) {
+        console.error(e);
+        this.$message.error((e && e.message) || '操作失败');
+      } finally {
+        this.reviewNodeLoading = false;
+      }
     }
   }
 }
