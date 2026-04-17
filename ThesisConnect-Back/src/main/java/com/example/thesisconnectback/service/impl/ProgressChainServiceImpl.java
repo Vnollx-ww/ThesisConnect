@@ -1,6 +1,7 @@
 package com.example.thesisconnectback.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.example.thesisconnectback.entity.ProgressChain;
 import com.example.thesisconnectback.entity.ProgressChainNode;
@@ -183,7 +184,17 @@ public class ProgressChainServiceImpl extends ServiceImpl<ProgressChainMapper, P
     }
 
     @Override
+    @Transactional
     public boolean deleteChain(Long id) {
+        // 检查是否有选题正在使用该链路
+        long usedCount = selectionMapper.selectCount(
+                new QueryWrapper<Selection>().eq("progress_chain_id", id).eq("deleted", 0));
+        if (usedCount > 0) {
+            throw new RuntimeException("该链路正在被 " + usedCount + " 个选题使用，无法删除");
+        }
+        // 同时删除关联的节点
+        progressChainNodeMapper.delete(
+                new QueryWrapper<ProgressChainNode>().eq("chain_id", id));
         return removeById(id);
     }
 
@@ -194,13 +205,11 @@ public class ProgressChainServiceImpl extends ServiceImpl<ProgressChainMapper, P
         if (c == null) {
             return false;
         }
-        List<ProgressChain> all = list();
-        for (ProgressChain x : all) {
-            if (x.getIsDefault() != null && x.getIsDefault() == 1 && !x.getId().equals(id)) {
-                x.setIsDefault(0);
-                updateById(x);
-            }
-        }
+        // 批量取消其他默认链路（避免 N+1 更新）
+        update(new LambdaUpdateWrapper<ProgressChain>()
+                .ne(ProgressChain::getId, id)
+                .eq(ProgressChain::getIsDefault, 1)
+                .set(ProgressChain::getIsDefault, 0));
         c.setIsDefault(1);
         return updateById(c);
     }

@@ -17,6 +17,10 @@ import java.time.LocalDateTime;
 @TableName("sys_selection_node_submission")
 public class SelectionNodeSubmission {
 
+    public static final String STATUS_PENDING = "pending";
+    public static final String STATUS_APPROVED = "approved";
+    public static final String STATUS_REJECTED = "rejected";
+
     @TableId(type = IdType.AUTO)
     private Long id;
 

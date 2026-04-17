@@ -353,7 +353,11 @@ public class SelectionController {
             String action = body.get("action") != null ? body.get("action").toString() : "";
             Integer setCount = null;
             if (body.get("setCount") != null) {
-                setCount = Integer.valueOf(body.get("setCount").toString());
+                try {
+                    setCount = Integer.valueOf(body.get("setCount").toString());
+                } catch (NumberFormatException e) {
+                    return Result.badRequest("setCount 必须为整数");
+                }
             }
             boolean ok = selectionService.adjustProgressChainStep(id, action, setCount, userId, role);
             return ok ? Result.<Void>success("已更新", null) : Result.error("更新失败（请确认选题已确认且已套用进度链路）");

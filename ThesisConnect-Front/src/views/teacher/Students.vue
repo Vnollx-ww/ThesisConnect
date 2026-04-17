@@ -1041,13 +1041,6 @@ export default {
       return requirements;
     },
     
-    getProgressColor(progress) {
-      if (progress >= 80) return '#67C23A';
-      if (progress >= 60) return '#E6A23C';
-      if (progress >= 40) return '#F56C6C';
-      return '#909399';
-    },
-    
     getDocumentStatusText(status) {
       const statusMap = {
         'approved': '已通过',

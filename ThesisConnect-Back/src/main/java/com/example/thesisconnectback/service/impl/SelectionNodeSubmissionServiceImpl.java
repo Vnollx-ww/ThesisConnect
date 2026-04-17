@@ -46,7 +46,7 @@ public class SelectionNodeSubmissionServiceImpl extends ServiceImpl<SelectionNod
     @Override
     public boolean isLatestApprovedForNode(Long selectionId, int nodeIndex) {
         SelectionNodeSubmission latest = findLatest(selectionId, nodeIndex);
-        return latest != null && "approved".equals(latest.getStatus());
+        return latest != null && SelectionNodeSubmission.STATUS_APPROVED.equals(latest.getStatus());
     }
 
     @Override
@@ -57,8 +57,13 @@ public class SelectionNodeSubmissionServiceImpl extends ServiceImpl<SelectionNod
         if (d.isEmpty() && u.isEmpty()) {
             throw new BusinessException(400, "请填写阶段说明或材料链接");
         }
-        if (u.length() > 500) {
-            throw new BusinessException(400, "材料链接长度不能超过 500 字符");
+        if (!u.isEmpty()) {
+            if (u.length() > 500) {
+                throw new BusinessException(400, "材料链接长度不能超过 500 字符");
+            }
+            if (!u.matches("^(https?://|//).+")) {
+                throw new BusinessException(400, "材料链接格式不正确，请以 http:// 或 https:// 开头");
+            }
         }
 
         Selection selection = selectionService.getById(selectionId);
@@ -87,10 +92,10 @@ public class SelectionNodeSubmissionServiceImpl extends ServiceImpl<SelectionNod
 
         SelectionNodeSubmission latest = findLatest(selectionId, c);
         if (latest != null) {
-            if ("pending".equals(latest.getStatus())) {
+            if (SelectionNodeSubmission.STATUS_PENDING.equals(latest.getStatus())) {
                 throw new BusinessException(400, "已有待审核的提交，请等待指导教师审核");
             }
-            if ("approved".equals(latest.getStatus())) {
+            if (SelectionNodeSubmission.STATUS_APPROVED.equals(latest.getStatus())) {
                 throw new BusinessException(400, "本阶段材料已通过，请等待教师推进到下一阶段后再提交");
             }
         }
@@ -100,17 +105,17 @@ public class SelectionNodeSubmissionServiceImpl extends ServiceImpl<SelectionNod
         row.setNodeIndex(c);
         row.setDescription(d.isEmpty() ? null : d);
         row.setReportUrl(u.isEmpty() ? null : u);
-        row.setStatus("pending");
+        row.setStatus(SelectionNodeSubmission.STATUS_PENDING);
         save(row);
     }
 
     @Override
     @Transactional
     public void reviewMaterial(Long selectionId, Long submissionId, Long reviewerUserId, String reviewerRole, String status, String rejectReason) {
-        if (!"approved".equals(status) && !"rejected".equals(status)) {
+        if (!SelectionNodeSubmission.STATUS_APPROVED.equals(status) && !SelectionNodeSubmission.STATUS_REJECTED.equals(status)) {
             throw new BusinessException(400, "审核状态无效");
         }
-        if ("rejected".equals(status) && (rejectReason == null || rejectReason.trim().isEmpty())) {
+        if (SelectionNodeSubmission.STATUS_REJECTED.equals(status) && (rejectReason == null || rejectReason.trim().isEmpty())) {
             throw new BusinessException(400, "驳回时请填写原因");
         }
 
@@ -121,7 +126,7 @@ public class SelectionNodeSubmissionServiceImpl extends ServiceImpl<SelectionNod
         if (selectionId == null || !selectionId.equals(sub.getSelectionId())) {
             throw new BusinessException(400, "记录与选题不匹配");
         }
-        if (!"pending".equals(sub.getStatus())) {
+        if (!SelectionNodeSubmission.STATUS_PENDING.equals(sub.getStatus())) {
             throw new BusinessException(400, "该条记录已审核，请勿重复操作");
         }
 
@@ -142,14 +147,14 @@ public class SelectionNodeSubmissionServiceImpl extends ServiceImpl<SelectionNod
         String reviewerName = reviewer != null && reviewer.getRealName() != null ? reviewer.getRealName() : "";
 
         sub.setStatus(status);
-        sub.setRejectReason("rejected".equals(status) ? rejectReason.trim() : null);
+        sub.setRejectReason(SelectionNodeSubmission.STATUS_REJECTED.equals(status) ? rejectReason.trim() : null);
         sub.setReviewerId(reviewerUserId);
         sub.setReviewerName(reviewerName);
         sub.setReviewTime(LocalDateTime.now());
         updateById(sub);
 
-        String title = "approved".equals(status) ? "阶段材料已通过" : "阶段材料需修改";
-        String content = "approved".equals(status)
+        String title = SelectionNodeSubmission.STATUS_APPROVED.equals(status) ? "阶段材料已通过" : "阶段材料需修改";
+        String content = SelectionNodeSubmission.STATUS_APPROVED.equals(status)
                 ? "您的阶段材料已通过审核，指导教师将据此推进进度。"
                 : ("审核意见：" + rejectReason.trim());
         try {

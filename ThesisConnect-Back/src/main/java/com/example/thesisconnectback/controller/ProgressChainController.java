@@ -99,7 +99,11 @@ public class ProgressChainController {
         String description = body.get("description") != null ? body.get("description").toString() : null;
         Integer sortOrder = null;
         if (body.get("sortOrder") != null) {
-            sortOrder = Integer.valueOf(body.get("sortOrder").toString());
+            try {
+                sortOrder = Integer.valueOf(body.get("sortOrder").toString());
+            } catch (NumberFormatException e) {
+                return Result.badRequest("sortOrder 必须为整数");
+            }
         }
         return Result.success(progressChainService.addNode(id, title, description, sortOrder));
     }
@@ -116,7 +120,11 @@ public class ProgressChainController {
         String description = body.get("description") != null ? body.get("description").toString() : null;
         Integer sortOrder = null;
         if (body.get("sortOrder") != null) {
-            sortOrder = Integer.valueOf(body.get("sortOrder").toString());
+            try {
+                sortOrder = Integer.valueOf(body.get("sortOrder").toString());
+            } catch (NumberFormatException e) {
+                return Result.badRequest("sortOrder 必须为整数");
+            }
         }
         boolean ok = progressChainService.updateNode(nodeId, title, description, sortOrder);
         return ok ? Result.<Void>success("保存成功", null) : Result.error("保存失败");
